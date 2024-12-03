@@ -4,6 +4,7 @@
 
 #include "EdMode.h"
 #include "Client/FPlaySessionHeatmapResponseDto.h"
+#include "Client/LudiscanClient.h"
 
 /**
  * 
@@ -28,11 +29,16 @@ public:
 	void SetColorScaleFactor(float NewValue)
 	{
 		ColorScaleFactor = FMath::Clamp(NewValue, 0.1f, 10.0f);
+		LudiscanClient::SetSaveHeatmapColorScaleFilter(ColorScaleFactor);
 	}
 	void RefreshDrawPositions() { GenerateDrawPositions(); }
 
 	bool IsDrawZAxis() const { return bDrawZAxis; }
-	void SetDrawZAxis(bool bNewValue) { bDrawZAxis = bNewValue; }
+	void SetDrawZAxis(bool bNewValue)
+	{
+		bDrawZAxis = bNewValue;
+		LudiscanClient::SetSaveHeatmapDrawZAxis(bNewValue);
+	}
 private:
 	void GenerateDrawPositions();
 	void CalculateBoundingBox();

@@ -3,6 +3,8 @@
 
 #include "Client/PositionRecorder.h"
 
+#include "Client/LudiscanClient.h"
+
 UPositionRecorder::UPositionRecorder(): StartTime(0), WorldContext(nullptr)
 {
 }

@@ -3,10 +3,16 @@
 
 #include "HeatMapEdMode.h"
 
+#include "Client/LudiscanClient.h"
+
 const FEditorModeID FHeatMapEdMode::EM_HeatMapEdMode = TEXT("EM_HeatMapEdMode");
 
 FHeatMapEdMode::FHeatMapEdMode()
 {
+	const float SavedFilter = LudiscanClient::GetSaveHeatmapColorScaleFilter(1.0f);
+	SetColorScaleFactor(SavedFilter);
+	const bool SavedZAxis = LudiscanClient::GetSaveHeatmapDrawZAxis(false);
+	SetDrawZAxis(SavedZAxis);
 }
 
 FHeatMapEdMode::~FHeatMapEdMode()

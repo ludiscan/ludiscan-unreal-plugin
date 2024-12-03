@@ -15,6 +15,11 @@ public:
 	{
 		SaveSetting(Key, Value);
 	}
+	static void SetBool(const FString& Key, bool Value)
+	{
+		SaveSetting(Key, Value ? TEXT("true") : TEXT("false"));
+	}
+
 	static float GetFloat(const FString& Key, float DefaultValue)
 	{
 		const FString Value = LoadSetting(Key);
@@ -29,6 +34,11 @@ public:
 	{
 		const FString Value = LoadSetting(Key);
 		return Value.IsEmpty() ? DefaultValue : Value;
+	}
+	static bool GetBool(const FString& Key, bool DefaultValue)
+	{
+		const FString Value = LoadSetting(Key);
+		return Value.IsEmpty() ? DefaultValue : Value == TEXT("true");
 	}
 private:
 	static void SaveSetting(const FString& Key, const FString& Value)

@@ -1,5 +1,5 @@
 #pragma once
-#include "Client/SettingsManager.h"
+#include "Client/Project.h"
 #include "Widget/SHeatMapWidget.h"
 #include "Widget/SSelectProjectWidget.h"
 #include "Widget/SSelectSessionWidget.h"
@@ -63,7 +63,7 @@ private:
 	TSharedPtr<SHeatMapWidget> HeatmapWidget;
 
 	TSharedPtr<SEditableTextBox> HostnameInputBox;
-	FString Hostname = "http://localhost:3000";
+	FString Hostname = "https://yuhi.tokyo";
 	FProject SelectedProject = FProject();
 	FPlaySessionResponseDto SelectedSession = FPlaySessionResponseDto();
 
@@ -97,7 +97,7 @@ private:
 
 	FText GetHostName() const
 	{
-		const FString TempName = FSettingsManager::GetString("Hostname", "http://localhost:3000");
+		const FString TempName = LudiscanClient::GetSaveApiHostName("https://yuhi.tokyo");
 		if (TempName.IsEmpty())
 		{
 			return FText::FromString(Hostname); // デフォルト値を使用
@@ -112,7 +112,7 @@ private:
 
 	FReply OnReloadButtonClicked()
 	{
-		FSettingsManager::SetString("Hostname", Hostname);
+		LudiscanClient::SetSaveApiHostName(Hostname);
 		if (WidgetSwitcher.IsValid())
 		{
 			TSharedPtr<SWidget> ActiveWidget = WidgetSwitcher->GetActiveWidget();
