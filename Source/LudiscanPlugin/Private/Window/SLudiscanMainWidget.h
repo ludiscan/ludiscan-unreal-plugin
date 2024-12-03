@@ -54,6 +54,7 @@ public:
 				]
 			]
 		];
+		Hostname = LudiscanClient::GetSaveApiHostName("https://yuhi.tokyo");
 	}
 
 private:
@@ -63,7 +64,7 @@ private:
 	TSharedPtr<SHeatMapWidget> HeatmapWidget;
 
 	TSharedPtr<SEditableTextBox> HostnameInputBox;
-	FString Hostname = "https://yuhi.tokyo";
+	FString Hostname = "";
 	FProject SelectedProject = FProject();
 	FPlaySessionResponseDto SelectedSession = FPlaySessionResponseDto();
 
@@ -97,15 +98,24 @@ private:
 
 	FText GetHostName() const
 	{
-		const FString TempName = LudiscanClient::GetSaveApiHostName("https://yuhi.tokyo");
-		if (TempName.IsEmpty())
+		if (Hostname.IsEmpty())
 		{
-			return FText::FromString(Hostname); // デフォルト値を使用
+			const FString TempName = LudiscanClient::GetSaveApiHostName("https://yuhi.tokyo");
+			if (TempName.IsEmpty())
+			{
+				return FText::FromString(Hostname); // デフォルト値を使用
+			}
+			return FText::FromString(TempName);
 		}
-		return FText::FromString(TempName);
+		return FText::FromString(Hostname);
 	}
 
 	void OnHostNameCommitted(const FText& Text, ETextCommit::Type Arg)
+	{
+		Hostname = Text.ToString();
+	}
+
+	void OnHostNameChanged(const FText& Text)
 	{
 		Hostname = Text.ToString();
 	}
@@ -142,7 +152,8 @@ private:
 			[
 				SAssignNew(HostnameInputBox, SEditableTextBox)
 				.Text_Raw(this, &SLudiscanMainWidget::GetHostName)
-				.OnTextCommitted_Raw(this, &SLudiscanMainWidget::OnHostNameCommitted)
+				.OnTextChanged(this, &SLudiscanMainWidget::OnHostNameChanged)
+				.OnTextCommitted(this, &SLudiscanMainWidget::OnHostNameCommitted)
 				.HintText(FText::FromString("Enter API Hostname"))
 			]
 			+ SHorizontalBox::Slot()

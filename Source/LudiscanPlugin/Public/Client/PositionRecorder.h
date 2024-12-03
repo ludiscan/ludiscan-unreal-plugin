@@ -17,8 +17,17 @@ class LUDISCANPLUGIN_API UPositionRecorder : public UObject
 public:
 	UPositionRecorder();
 
+	void CreateSession(
+		UWorld* Context,
+		int NewProjectId,
+		FString SessionTitle = "TitleNone",
+		TFunction<void(FPlaySessionCreate)> OnResponse = [](FPlaySessionCreate PlaySession) {}
+		);
+
 	void StartRecording(UWorld* Context);
 	void StopRecording();
+
+	void FinishedRecording();
 	const TArray<TArray<FPlayerPosition>>& GetPositionData() const;
 
 private:
@@ -28,6 +37,11 @@ private:
 
 	UPROPERTY()
 	UWorld* WorldContext;
+
+	LudiscanClient Client;
+
+	// 実行中のsession
+	FPlaySessionCreate PlaySessionCreate;
 
 	void RecordPlayerPositions();
 };

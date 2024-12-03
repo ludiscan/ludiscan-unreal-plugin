@@ -23,6 +23,7 @@ public:
     const static FString SaveApiHostNameKey;
     const static FString SaveHeatmapColorScaleFilterKey;
     const static FString SaveHeatmapDrawZAxisKey;
+	const static FString SaveProjectIdKey;
     LudiscanClient();
     ~LudiscanClient();
 
@@ -39,6 +40,10 @@ public:
     static void SetSaveHeatmapDrawZAxis(const bool NewDrawZAxis);
 
     static bool GetSaveHeatmapDrawZAxis(const bool DefaultDrawZAxis);
+
+	static void SetSaveProjectId(const int NewProjectId);
+
+	static int GetSaveProjectId(const int DefaultProjectId);
 
     void CreatePositionsPost(
         int projectId,
@@ -70,6 +75,8 @@ public:
         const FString& DeviceId,
         const FString& Platform,
         const FString& AppVersion,
+        const FString& levelName,
+        TMap<FString, FString> ExtraData,
         TFunction<void(FPlaySessionCreate)> OnResponse
     );
 
@@ -99,6 +106,7 @@ private:
 inline const FString LudiscanClient::SaveApiHostNameKey = TEXT("LudiscanApiHostName");
 inline const FString LudiscanClient::SaveHeatmapColorScaleFilterKey = TEXT("LudiscanHeatmapColorScaleFiler");
 inline const FString LudiscanClient::SaveHeatmapDrawZAxisKey = TEXT("LudiscanHeatmapDrawZAxis");
+inline const FString LudiscanClient::SaveProjectIdKey = TEXT("LudiscanProjectId");
 
 inline LudiscanClient::LudiscanClient()
 {
@@ -144,6 +152,16 @@ inline void LudiscanClient::SetSaveHeatmapDrawZAxis(const bool NewDrawZAxis)
 inline bool LudiscanClient::GetSaveHeatmapDrawZAxis(const bool DefaultDrawZAxis)
 {
 	return FSettingsManager::GetBool(SaveHeatmapDrawZAxisKey, DefaultDrawZAxis);
+}
+
+inline void LudiscanClient::SetSaveProjectId(const int NewProjectId)
+{
+	FSettingsManager::SetInt(SaveProjectIdKey, NewProjectId);
+}
+
+inline int LudiscanClient::GetSaveProjectId(const int DefaultProjectId)
+{
+	return FSettingsManager::GetInt(SaveProjectIdKey, DefaultProjectId);
 }
 
 inline void LudiscanClient::CreatePositionsPost(int projectId, int sessionId, int players, int stampCount,
@@ -229,8 +247,15 @@ inline void LudiscanClient::GetHeatMap(int projectId, int sessionId,
 	Request->ProcessRequest();
 }
 
-inline void LudiscanClient::CreateSession(int projectId, const FString& Name, const FString& DeviceId, const FString& Platform,
-	const FString& AppVersion, TFunction<void(FPlaySessionCreate)> OnResponse)
+inline void LudiscanClient::CreateSession(
+	int projectId,
+	const FString& Name,
+	const FString& DeviceId,
+	const FString& Platform,
+	const FString& AppVersion,
+	const FString& levelName,
+	TMap<FString, FString> ExtraData,
+	TFunction<void(FPlaySessionCreate)> OnResponse)
 {
 	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
 	Request->SetURL(bApiHostName + "/api/v0/projects/" + FString::FromInt(projectId) + "/play_session");
@@ -241,6 +266,15 @@ inline void LudiscanClient::CreateSession(int projectId, const FString& Name, co
 	JsonObject->SetStringField("deviceId", DeviceId);
 	JsonObject->SetStringField("platform", Platform);
 	JsonObject->SetStringField("appVersion", AppVersion);
+
+	TSharedPtr<FJsonObject> MetaData = MakeShareable(new FJsonObject());
+	MetaData->SetStringField("mapName", levelName);
+	for (const auto& Pair : ExtraData)
+	{
+		MetaData->SetStringField(Pair.Key, Pair.Value);
+	}
+
+	JsonObject->SetObjectField("metaData", MetaData);
 
 	FString RequestBody;
 	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&RequestBody);
@@ -343,7 +377,7 @@ inline TArray<uint8> LudiscanClient::ConstructBinaryData(int players, int stampC
 
 	// 各タイムスタンプごとのデータを追加
 	for (int i = 0; i < stampCount; ++i) {
-		for (int p = 0; p < players; ++p) {
+		for (int p = 0; p < allPositions[1].Num(); ++p) {
 			const FPlayerPosition& pos = allPositions[i][p];
 
 			// プレイヤー識別子をリトルエンディアンで追加

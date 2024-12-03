@@ -26,7 +26,17 @@ public:
 		.Padding(5)
 		[
 			SNew(SVerticalBox)
-
+			// 現在のセッション情報を表示
+	        + SVerticalBox::Slot()
+	        .FillHeight(1.0f)
+	        .Padding(5)
+	        [
+				SNew(SScrollBox)
+		        + SScrollBox::Slot()
+		        [
+		            SessionInfoRow()
+		        ]
+	        ]
 			// 色強調度のスライダー
 			+ SVerticalBox::Slot()
 			.AutoHeight()
@@ -75,6 +85,7 @@ public:
 	void Reload(const FString& Name, FPlaySessionResponseDto Session)
 	{
 		SelectedSession = Session;
+		SelectedSession.Log();
 		HostName = Name;
 		ActivateHeatmap();
 		LoadHeatMap();
@@ -85,6 +96,155 @@ public:
 		DeactivateHeatMap();
 	}
 private:
+	 TSharedRef<SBorder> SessionInfoRow()
+	{
+		return SNew(SBorder)
+        .BorderBackgroundColor(FLinearColor(0.2f, 0.2f, 0.2f, 1.0f)) // 背景色
+        .Padding(FMargin(5.0f))
+        [
+            SNew(SVerticalBox)
+            // セッション ID
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            .Padding(2.0f)
+            [
+                SNew(STextBlock)
+                .Text_Lambda([this]() -> FText {
+                    return FText::FromString(SelectedSession.SessionId > 0
+                        ? FString::Printf(TEXT("Session ID: %d"), SelectedSession.SessionId)
+                        : FString(TEXT("No session selected")));
+                })
+                .TextStyle(FAppStyle::Get(), "NormalText")
+            ]
+            // プロジェクト ID
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            .Padding(2.0f)
+            [
+                SNew(STextBlock)
+                .Text_Lambda([this]() -> FText {
+                    return FText::FromString(FString::Printf(TEXT("Project ID: %d"), SelectedSession.ProjectId));
+                })
+                .TextStyle(FAppStyle::Get(), "NormalText")
+            ]
+            // セッション名
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            .Padding(2.0f)
+            [
+                SNew(STextBlock)
+                .Text_Lambda([this]() -> FText {
+                    return FText::FromString(!SelectedSession.Name.IsEmpty()
+                        ? FString::Printf(TEXT("Name: %s"), *SelectedSession.Name)
+                        : FString(TEXT("Name: Unknown")));
+                })
+                .TextStyle(FAppStyle::Get(), "NormalText")
+            ]
+            // デバイス ID
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            .Padding(2.0f)
+            [
+                SNew(STextBlock)
+                .Text_Lambda([this]() -> FText {
+                    return FText::FromString(!SelectedSession.DeviceId.IsEmpty()
+                        ? FString::Printf(TEXT("Device ID: %s"), *SelectedSession.DeviceId)
+                        : FString(TEXT("Device ID: Unknown")));
+                })
+                .TextStyle(FAppStyle::Get(), "NormalText")
+            ]
+            // プラットフォーム
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            .Padding(2.0f)
+            [
+                SNew(STextBlock)
+                .Text_Lambda([this]() -> FText {
+                    return FText::FromString(!SelectedSession.Platform.IsEmpty()
+                        ? FString::Printf(TEXT("Platform: %s"), *SelectedSession.Platform)
+                        : FString(TEXT("Platform: Unknown")));
+                })
+                .TextStyle(FAppStyle::Get(), "NormalText")
+            ]
+            // アプリバージョン
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            .Padding(2.0f)
+            [
+                SNew(STextBlock)
+                .Text_Lambda([this]() -> FText {
+                    return FText::FromString(!SelectedSession.AppVersion.IsEmpty()
+                        ? FString::Printf(TEXT("App Version: %s"), *SelectedSession.AppVersion)
+                        : FString(TEXT("App Version: Unknown")));
+                })
+                .TextStyle(FAppStyle::Get(), "NormalText")
+            ]
+            // 開始時刻
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            .Padding(2.0f)
+            [
+                SNew(STextBlock)
+                .Text_Lambda([this]() -> FText {
+                    return FText::FromString(!SelectedSession.StartTime.IsEmpty()
+                        ? FString::Printf(TEXT("Start Time: %s"), *SelectedSession.StartTime)
+                        : FString(TEXT("Start Time: Unknown")));
+                })
+                .TextStyle(FAppStyle::Get(), "NormalText")
+            ]
+            // 終了時刻
+            + SVerticalBox::Slot()
+            .AutoHeight()
+            .Padding(2.0f)
+            [
+                SNew(STextBlock)
+                .Text_Lambda([this]() -> FText {
+                    return FText::FromString(!SelectedSession.EndTime.IsEmpty()
+                        ? FString::Printf(TEXT("End Time: %s"), *SelectedSession.EndTime)
+                        : FString(TEXT("End Time: Unknown")));
+                })
+                .TextStyle(FAppStyle::Get(), "NormalText")
+            ]
+	        + SVerticalBox::Slot()
+	        .AutoHeight()
+	        .Padding(2.0f)
+	        [
+	        	SNew(SVerticalBox)
+				+ SVerticalBox::Slot()
+				.AutoHeight()
+				[
+					SNew(STextBlock)
+					.Text(FText::FromString("MetaData:"))
+					.TextStyle(FAppStyle::Get(), "NormalText")
+				]
+				// MetaData の各キーと値を表示
+				+ SVerticalBox::Slot()
+				.AutoHeight()
+				[
+					SNew(SVerticalBox)
+					.Clipping(EWidgetClipping::ClipToBounds)
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(2.0f)
+					.HAlign(HAlign_Left)
+					[
+						SNew(STextBlock)
+						.Text_Lambda([this]() -> FText {
+							FString MetaDataString;
+							for (const auto& Pair : SelectedSession.MetaData)
+							{
+								MetaDataString += FString::Printf(TEXT("%s: %s\n"), *Pair.Key, *Pair.Value);
+							}
+							return FText::FromString(MetaDataString.IsEmpty()
+								? FString(TEXT("No metadata available"))
+								: MetaDataString);
+						})
+						.TextStyle(FAppStyle::Get(), "NormalText")
+					]
+				]
+	        ]
+        ];
+	}
 	FText GetColorScaleFactorText() const
 	{
 		return FText::FromString(FString::SanitizeFloat(GetColorScaleFactor()));

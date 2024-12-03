@@ -53,6 +53,10 @@ void FLudiscanPluginModule::ShutdownModule()
 	UToolMenus::UnregisterOwner(this);
 
 	FLudiscanPluginStyle::Shutdown();
+
+	PluginCommands.Reset();
+
+	FEditorModeRegistry::Get().UnregisterMode(FHeatMapEdMode::EM_HeatMapEdMode);
 }
 
 void FLudiscanPluginModule::PluginButtonClicked()

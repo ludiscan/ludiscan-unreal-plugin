@@ -44,6 +44,7 @@ private:
 	static void SaveSetting(const FString& Key, const FString& Value)
 	{
 		GConfig->SetString(TEXT("/Script/Engine.GameSettings"), *Key, *Value, GGameIni);
+		GConfig->Flush(false, GGameIni);
 	}
 
 	static FString LoadSetting(const FString& Key)

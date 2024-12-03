@@ -17,6 +17,7 @@ FHeatMapEdMode::FHeatMapEdMode()
 
 FHeatMapEdMode::~FHeatMapEdMode()
 {
+	
 }
 
 

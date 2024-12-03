@@ -19,6 +19,73 @@ public:
         ChildSlot
         [
             SNew(SVerticalBox)
+        	+ SVerticalBox::Slot()
+		    .AutoHeight()
+		    .Padding(FMargin(10.0f, 5.0f))
+		    [
+		        SNew(SBorder)
+		        .BorderBackgroundColor(FLinearColor(0.2f, 0.2f, 0.2f, 1.0f)) // 背景色
+		        .Padding(FMargin(5.0f))
+		        [
+		            SNew(SHorizontalBox)
+		            + SHorizontalBox::Slot()
+		            .AutoWidth()
+		            .Padding(2.0f)
+		            [
+		                SNew(STextBlock)
+		                .Text_Lambda([this]() -> FText {
+		                	if (SelectedProject.Id != FProject().Id) {
+		                        return FText::FromString(FString::FromInt(SelectedProject.Id));
+		                    }
+		                    return FText::FromString("ID: -");
+		                })
+		                .TextStyle(FAppStyle::Get(), "NormalText")
+		                .MinDesiredWidth(50)
+		            ]
+		            + SHorizontalBox::Slot()
+		            .AutoWidth()
+		            .Padding(2.0f)
+		            [
+		                SNew(STextBlock)
+		                .Text_Lambda([this]() -> FText {
+		                    if (SelectedProject.Id != FProject().Id) {
+		                        return FText::FromString(SelectedProject.Name);
+		                    }
+		                    return FText::FromString("No Name");
+		                })
+		                .TextStyle(FAppStyle::Get(), "NormalText")
+		                .MinDesiredWidth(200)
+		            ]
+		            + SHorizontalBox::Slot()
+		            .AutoWidth()
+		            .Padding(2.0f)
+		            [
+		                SNew(STextBlock)
+		                .Text_Lambda([this]() -> FText {
+		                	if (SelectedProject.Id != FProject().Id) {
+		                        return FText::FromString(SelectedProject.Description);
+		                    }
+		                    return FText::FromString("No Description");
+		                })
+		                .TextStyle(FAppStyle::Get(), "NormalText")
+		                .MinDesiredWidth(180)
+		            ]
+		            + SHorizontalBox::Slot()
+		            .AutoWidth()
+		            .Padding(2.0f)
+		            [
+		                SNew(STextBlock)
+		                .Text_Lambda([this]() -> FText {
+		                	if (SelectedProject.Id != FProject().Id) {
+		                        return FText::FromString(FormatTime(SelectedProject.CreatedAt));
+		                    }
+		                    return FText::FromString("N/A");
+		                })
+		                .TextStyle(FAppStyle::Get(), "NormalText")
+		                .MinDesiredWidth(200)
+		            ]
+		        ]
+		    ]
             + SVerticalBox::Slot()
         	.Padding(FMargin(10.0f, 5.0f)) // 左右: 10, 上下: 5
 			.HAlign(HAlign_Fill)           // 横幅いっぱいに
