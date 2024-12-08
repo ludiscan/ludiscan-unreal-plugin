@@ -1,49 +1,34 @@
 #pragma once
 
-#include "CoreMinimal.h"
-#include "FPlaySessionResponse.generated.h"
-
-USTRUCT(BlueprintType)
-struct FPlaySessionResponseDto
+struct FPlaySession
 {
-	GENERATED_BODY()
 
-	UPROPERTY()
 	int32 SessionId;
 
-	UPROPERTY()
 	int32 ProjectId;
 
-	UPROPERTY()
 	FString Name;
 
-	UPROPERTY()
 	FString DeviceId;
 
-	UPROPERTY()
 	FString Platform;
 
-	UPROPERTY()
 	FString AppVersion;
 
-	UPROPERTY()
 	TMap<FString, FString> MetaData;
 
-	UPROPERTY()
 	FString StartTime;
 
-	UPROPERTY()
 	FString EndTime;
 
-	UPROPERTY()
 	bool bIsPlaying;
 	// JSONの自動変換を可能にするために必要
-	FPlaySessionResponseDto()
+	FPlaySession()
 		: SessionId(0), ProjectId(0), bIsPlaying(false)
 	{}
 
 	// JSON オブジェクトから単一のデータをパースするメソッド
-	static bool ParseDataFromJson(const TSharedPtr<FJsonObject>& JsonObject, FPlaySessionResponseDto& OutData)
+	static bool ParseDataFromJson(const TSharedPtr<FJsonObject>& JsonObject, FPlaySession& OutData)
 	{
 		if (!JsonObject.IsValid())
 		{
@@ -60,15 +45,17 @@ struct FPlaySessionResponseDto
 		OutData.AppVersion = JsonObject->GetStringField(TEXT("appVersion"));
 
 		// MetaData を TMap<FString, FString> に変換
-		TSharedPtr<FJsonObject> MetaDataObject = JsonObject->GetObjectField(TEXT("metaData"));
-		if (MetaDataObject.IsValid())
+		const TSharedPtr<FJsonObject>* MetaDataObject;
+		if (JsonObject->TryGetObjectField(TEXT("metaData"), MetaDataObject))
 		{
-			for (const auto& Pair : MetaDataObject->Values)
+			if (MetaDataObject->IsValid())
 			{
-				OutData.MetaData.Add(Pair.Key, Pair.Value->AsString());
+				for (const auto& Pair : MetaDataObject->Get()->Values)
+				{
+					OutData.MetaData.Add(Pair.Key, Pair.Value->AsString());
+				}
 			}
 		}
-
 		OutData.StartTime = JsonObject->GetStringField(TEXT("startTime"));
 		OutData.EndTime = JsonObject->GetStringField(TEXT("endTime"));
 		OutData.bIsPlaying = JsonObject->GetBoolField(TEXT("isPlaying"));
@@ -77,7 +64,7 @@ struct FPlaySessionResponseDto
 	}
 
 	// JSON 配列から複数のデータをパースするメソッド
-	static bool ParseArrayFromJson(const FString& JsonString, TArray<FPlaySessionResponseDto>& OutArray)
+	static bool ParseArrayFromJson(const FString& JsonString, TArray<FPlaySession>& OutArray)
 	{
 		TArray<TSharedPtr<FJsonValue>> JsonArray;
 		TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(JsonString);
@@ -86,7 +73,7 @@ struct FPlaySessionResponseDto
 		{
 			for (const TSharedPtr<FJsonValue>& JsonValue : JsonArray)
 			{
-				FPlaySessionResponseDto Data;
+				FPlaySession Data;
 				if (ParseDataFromJson(JsonValue->AsObject(), Data))
 				{
 					OutArray.Add(Data);

@@ -94,6 +94,14 @@ public:
 	{
 		LoadProjects(HostName);
 	}
+
+	virtual ~SSelectProjectWidget() override
+	{
+		if (OnProjectSelected.IsBound())
+		{
+			OnProjectSelected.Unbind();
+		}
+	}
 private:
 	TArray<TSharedPtr<FProject>> ProjectItems;
 	TArray<TSharedPtr<FProject>> FilteredProjectItems;

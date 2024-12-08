@@ -17,7 +17,6 @@ FHeatMapEdMode::FHeatMapEdMode()
 
 FHeatMapEdMode::~FHeatMapEdMode()
 {
-	
 }
 
 
@@ -35,7 +34,7 @@ void FHeatMapEdMode::Draw(const FSceneView* View, FPrimitiveDrawInterface* PDI)
 	}
 }
 
-void FHeatMapEdMode::SetHeatmapData(const TArray<FPlaySessionHeatmapResponseDto>& NewHeatmapData)
+void FHeatMapEdMode::SetHeatmapData(const TArray<FHeatmapData>& NewHeatmapData)
 {
 	// 渡されたヒートマップデータを格納
 	HeatmapArray = NewHeatmapData;
@@ -53,7 +52,7 @@ void FHeatMapEdMode::CalculateBoundingBox()
 	float Space = 100.0f;
 
 	// HeatmapArrayからmin, maxを計算
-	for (const FPlaySessionHeatmapResponseDto& Data : HeatmapArray)
+	for (const FHeatmapData& Data : HeatmapArray)
 	{
 		minX = FMath::Min(minX, Data.X);
 		minY = FMath::Min(minY, Data.Y);
@@ -79,6 +78,9 @@ void FHeatMapEdMode::Enter()
 void FHeatMapEdMode::Exit()
 {
 	// 必要に応じてクリーンアップコードを追加
+	DrawPositions.Empty();
+	HeatmapArray.Empty();
+	
 	FEdMode::Exit();
 }
 
@@ -87,12 +89,21 @@ void FHeatMapEdMode::GenerateDrawPositions()
 	DrawPositions.Empty();
 	const float StepSize = 100.0f;
 	const FVector BoxSize = BoundingBox.Max - BoundingBox.Min;
+	if (BoxSize.X <= 0.0f || BoxSize.Y <= 0.0f || BoxSize.Z <= 0.0f)
+	{
+		return;
+	}
 	const int32 StepsX = FMath::CeilToInt(BoxSize.X / StepSize);
 	const int32 StepsY = FMath::CeilToInt(BoxSize.Y / StepSize);
 	const int32 StepsZ = FMath::CeilToInt(BoxSize.Z / StepSize);
 
 	const float MinDensityValue = 1.0f; // 最小密度値（対数スケール用に1以上を設定）
 	const float DensityScaleFactor = FMath::Loge(MaxDensityValue + 1.0f) - FMath::Loge(MinDensityValue);
+	if (DensityScaleFactor <= 0.0f)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DensityScaleFactor is non-positive. Skipping GenerateDrawPositions."));
+		return;
+	}
 
 	for (int32 X = 0; X <= StepsX; ++X)
 	{
@@ -109,7 +120,7 @@ void FHeatMapEdMode::GenerateDrawPositions()
 				float MinDistance = FLT_MAX;
 				float ClosestDensity = 0.0f;
 
-				for (const FPlaySessionHeatmapResponseDto& Data : HeatmapArray)
+				for (const FHeatmapData& Data : HeatmapArray)
 				{
 					float Distance = FVector::Dist(Position, FVector(Data.X, Data.Y, bDrawZAxis ? Data.Z : 0.0f));
 					if (Distance < MinDistance)

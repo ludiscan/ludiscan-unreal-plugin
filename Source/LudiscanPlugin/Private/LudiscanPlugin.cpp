@@ -54,7 +54,9 @@ void FLudiscanPluginModule::ShutdownModule()
 
 	FLudiscanPluginStyle::Shutdown();
 
-	PluginCommands.Reset();
+	FLudiscanPluginCommands::Unregister();
+
+	FGlobalTabmanager::Get()->UnregisterNomadTabSpawner(LudiscanPluginTabName);
 
 	FEditorModeRegistry::Get().UnregisterMode(FHeatMapEdMode::EM_HeatMapEdMode);
 }

@@ -3,7 +3,6 @@
 #pragma once
 
 #include "EdMode.h"
-#include "Client/FPlaySessionHeatmapResponseDto.h"
 #include "Client/LudiscanClient.h"
 
 /**
@@ -23,7 +22,7 @@ public:
 	virtual void Exit() override;
 	virtual void Draw(const FSceneView* View, FPrimitiveDrawInterface* PDI) override;
 
-	void SetHeatmapData(const TArray<FPlaySessionHeatmapResponseDto>& NewHeatmapData);
+	void SetHeatmapData(const TArray<FHeatmapData>& NewHeatmapData);
 
 	float GetColorScaleFactor() const { return ColorScaleFactor; }
 	void SetColorScaleFactor(float NewValue)
@@ -50,7 +49,7 @@ private:
 	bool bDrawZAxis = false;
 	float ColorScaleFactor = 1.0f;
 
-	TArray<FPlaySessionHeatmapResponseDto> HeatmapArray;
+	TArray<FHeatmapData> HeatmapArray;
 
 	TArray<TPair<FVector, FColor>> DrawPositions;
 };

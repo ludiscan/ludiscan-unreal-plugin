@@ -21,7 +21,7 @@ public:
 		UWorld* Context,
 		int NewProjectId,
 		FString SessionTitle = "TitleNone",
-		TFunction<void(FPlaySessionCreate)> OnResponse = [](FPlaySessionCreate PlaySession) {}
+		TFunction<void(FPlaySession)> OnResponse = [](FPlaySession PlaySession) {}
 		);
 
 	void StartRecording(UWorld* Context);
@@ -41,7 +41,7 @@ private:
 	LudiscanClient Client;
 
 	// 実行中のsession
-	FPlaySessionCreate PlaySessionCreate;
+	FPlaySession PlaySessionCreate;
 
 	void RecordPlayerPositions();
 };

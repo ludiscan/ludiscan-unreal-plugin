@@ -25,7 +25,7 @@ public class LudiscanPlugin : ModuleRules
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
-				"Core", "HTTP", "Json", "JsonUtilities", "RHI", "RenderCore",
+				"Core", "HTTP", "Json", "JsonUtilities", "RHI", "RenderCore", "Slate", "SlateCore", "UnrealEd",
 				// ... add other public dependencies that you statically link with here ...
 			}
 		);
@@ -43,6 +43,7 @@ public class LudiscanPlugin : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
+				"Core", "HTTP", "Json", "JsonUtilities", "RHI", "RenderCore",
 				// ... add private dependencies that you statically link with here ...	
 			}
 		);

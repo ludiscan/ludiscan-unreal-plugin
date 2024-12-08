@@ -6,11 +6,6 @@
 
 class SHeatMapWidget: public SCompoundWidget
 {
-private:
-	FPlaySessionResponseDto SelectedSession = FPlaySessionResponseDto();
-	FString HostName;
-	LudiscanClient Client = LudiscanClient();
-	TSharedPtr<FHeatMapEdMode> EdMode;
 public:
 	SLATE_BEGIN_ARGS(SHeatMapWidget) {}
 	SLATE_END_ARGS()
@@ -18,9 +13,12 @@ public:
 	void Construct(const FArguments& Args)
 	{
 		ActivateHeatmap();
-		if (FHeatMapEdMode* CustomGizmoMode = static_cast<FHeatMapEdMode*>(GLevelEditorModeTools().GetActiveMode(FHeatMapEdMode::EM_HeatMapEdMode)))
+		if (GLevelEditorModeToolsIsValid())
 		{
-			EdMode = MakeShareable(CustomGizmoMode);
+			if (FHeatMapEdMode* CustomGizmoMode = static_cast<FHeatMapEdMode*>(GLevelEditorModeTools().GetActiveMode(FHeatMapEdMode::EM_HeatMapEdMode)))
+			{
+				EdMode = MakeShareable(CustomGizmoMode);
+			}
 		}
 		ChildSlot
 		.Padding(5)
@@ -82,22 +80,126 @@ public:
 	}
 	
 	
-	void Reload(const FString& Name, FPlaySessionResponseDto Session)
+	void Reload(const FString& Name, const FHeatMapTask& NewTask)
 	{
-		SelectedSession = Session;
-		SelectedSession.Log();
 		HostName = Name;
-		ActivateHeatmap();
-		LoadHeatMap();
+		SetTask(NewTask);
+	}
+
+	virtual ~SHeatMapWidget() override
+	{
+		Unload();
 	}
 
 	void Unload()
 	{
-		DeactivateHeatMap();
+		if (!IsEngineExitRequested())
+		{
+			DeactivateHeatMap();
+		}
+		// タイマーが動作している場合はクリア
+		if (World && World->GetTimerManager().IsTimerActive(TaskPollingTimerHandle))
+		{
+			World->GetTimerManager().ClearTimer(TaskPollingTimerHandle);
+		}
 	}
 private:
-	 TSharedRef<SBorder> SessionInfoRow()
+	FHeatMapTask SelectedTask = FHeatMapTask();
+	FString HostName;
+	LudiscanClient Client = LudiscanClient();
+	TSharedPtr<FHeatMapEdMode> EdMode;
+	FTimerHandle TaskPollingTimerHandle;
+	UWorld* World = GEditor->GetEditorWorldContext().World();
+
+	// ポーリング間隔（秒単位）
+	const float TaskPollingInterval = 1.5f;
+
+	void SetTask(const FHeatMapTask& NewTask)
 	{
+		SelectedTask = NewTask;
+		if (World)
+		{
+			World->GetTimerManager().ClearTimer(TaskPollingTimerHandle);
+		}
+
+		// 最初の getTask 呼び出し
+		if (World)
+		{
+			World->GetTimerManager().SetTimer(
+				TaskPollingTimerHandle,
+				FTimerDelegate::CreateSP(this, &SHeatMapWidget::PollGetTask),
+				TaskPollingInterval,
+				false
+			);
+		}
+	}
+
+	void PollGetTask()
+	{
+		Client.GetTask(
+			SelectedTask,
+			[this](const FHeatMapTask& Task) {
+				SelectedTask = Task;
+				SelectedTask.Log();
+				if (SelectedTask.Status == FHeatMapTask::Completed)
+				{
+					// タイマーを停止
+					if (World)
+	                {
+	                    World->GetTimerManager().ClearTimer(TaskPollingTimerHandle);
+	                }
+					if (GLevelEditorModeToolsIsValid())
+					{
+						if (FHeatMapEdMode* CustomGizmoMode = static_cast<FHeatMapEdMode*>(GLevelEditorModeTools().GetActiveMode(FHeatMapEdMode::EM_HeatMapEdMode)))
+						{
+							EdMode = MakeShareable(CustomGizmoMode);
+						}
+					}
+					if (EdMode.IsValid())
+					{
+						ActivateHeatmap();
+						EdMode->SetHeatmapData(SelectedTask.HeatMapDataArray);
+						EdMode->RefreshDrawPositions();
+					}
+				} else if (SelectedTask.Status == FHeatMapTask::Failed)
+				{
+					if (World)
+					{
+						World->GetTimerManager().ClearTimer(TaskPollingTimerHandle);
+					}
+					UE_LOG(LogTemp, Error, TEXT("Failed to get task: タスクの取得に失敗しました"));
+					FText DialogText = FText::FromString("Failed to get task: タスクの取得に失敗しました");
+					FMessageDialog::Open(EAppMsgType::Ok, DialogText);
+				} else
+				{
+					// タスクがまだ進行中の場合、次のポーリングをスケジュール
+					if (World)
+					{
+						World->GetTimerManager().SetTimer(
+							TaskPollingTimerHandle,
+							FTimerDelegate::CreateSP(this, &SHeatMapWidget::PollGetTask),
+							TaskPollingInterval,
+							false
+						);
+					}
+				}
+			},
+			[this](const FString& Message) {
+				// タイマーを停止
+				if (World)
+				{
+				   World->GetTimerManager().ClearTimer(TaskPollingTimerHandle);
+				}
+				UE_LOG(LogTemp, Error, TEXT("Failed to get task: %s"), *Message);
+				FText DialogText = FText::FromString(Message);
+				FMessageDialog::Open(EAppMsgType::Ok, DialogText);
+			}
+		);
+	}
+	
+	TSharedRef<SBorder> SessionInfoRow()
+	{
+		FPlaySession Session = SelectedTask.Session;
 		return SNew(SBorder)
         .BorderBackgroundColor(FLinearColor(0.2f, 0.2f, 0.2f, 1.0f)) // 背景色
         .Padding(FMargin(5.0f))
@@ -109,9 +211,9 @@ private:
             .Padding(2.0f)
             [
                 SNew(STextBlock)
-                .Text_Lambda([this]() -> FText {
-                    return FText::FromString(SelectedSession.SessionId > 0
-                        ? FString::Printf(TEXT("Session ID: %d"), SelectedSession.SessionId)
+                .Text_Lambda([this, Session]() -> FText {
+                    return FText::FromString(Session.SessionId > 0
+                        ? FString::Printf(TEXT("Session ID: %d"), Session.SessionId)
                         : FString(TEXT("No session selected")));
                 })
                 .TextStyle(FAppStyle::Get(), "NormalText")
@@ -122,8 +224,8 @@ private:
             .Padding(2.0f)
             [
                 SNew(STextBlock)
-                .Text_Lambda([this]() -> FText {
-                    return FText::FromString(FString::Printf(TEXT("Project ID: %d"), SelectedSession.ProjectId));
+                .Text_Lambda([this, Session]() -> FText {
+                    return FText::FromString(FString::Printf(TEXT("Project ID: %d"), Session.ProjectId));
                 })
                 .TextStyle(FAppStyle::Get(), "NormalText")
             ]
@@ -133,9 +235,9 @@ private:
             .Padding(2.0f)
             [
                 SNew(STextBlock)
-                .Text_Lambda([this]() -> FText {
-                    return FText::FromString(!SelectedSession.Name.IsEmpty()
-                        ? FString::Printf(TEXT("Name: %s"), *SelectedSession.Name)
+                .Text_Lambda([this, Session]() -> FText {
+                    return FText::FromString(!Session.Name.IsEmpty()
+                        ? FString::Printf(TEXT("Name: %s"), *Session.Name)
                         : FString(TEXT("Name: Unknown")));
                 })
                 .TextStyle(FAppStyle::Get(), "NormalText")
@@ -146,9 +248,9 @@ private:
             .Padding(2.0f)
             [
                 SNew(STextBlock)
-                .Text_Lambda([this]() -> FText {
-                    return FText::FromString(!SelectedSession.DeviceId.IsEmpty()
-                        ? FString::Printf(TEXT("Device ID: %s"), *SelectedSession.DeviceId)
+                .Text_Lambda([this, Session]() -> FText {
+                    return FText::FromString(!Session.DeviceId.IsEmpty()
+                        ? FString::Printf(TEXT("Device ID: %s"), *Session.DeviceId)
                         : FString(TEXT("Device ID: Unknown")));
                 })
                 .TextStyle(FAppStyle::Get(), "NormalText")
@@ -159,9 +261,9 @@ private:
             .Padding(2.0f)
             [
                 SNew(STextBlock)
-                .Text_Lambda([this]() -> FText {
-                    return FText::FromString(!SelectedSession.Platform.IsEmpty()
-                        ? FString::Printf(TEXT("Platform: %s"), *SelectedSession.Platform)
+                .Text_Lambda([this, Session]() -> FText {
+                    return FText::FromString(!Session.Platform.IsEmpty()
+                        ? FString::Printf(TEXT("Platform: %s"), *Session.Platform)
                         : FString(TEXT("Platform: Unknown")));
                 })
                 .TextStyle(FAppStyle::Get(), "NormalText")
@@ -172,9 +274,9 @@ private:
             .Padding(2.0f)
             [
                 SNew(STextBlock)
-                .Text_Lambda([this]() -> FText {
-                    return FText::FromString(!SelectedSession.AppVersion.IsEmpty()
-                        ? FString::Printf(TEXT("App Version: %s"), *SelectedSession.AppVersion)
+                .Text_Lambda([this, Session]() -> FText {
+                    return FText::FromString(!Session.AppVersion.IsEmpty()
+                        ? FString::Printf(TEXT("App Version: %s"), *Session.AppVersion)
                         : FString(TEXT("App Version: Unknown")));
                 })
                 .TextStyle(FAppStyle::Get(), "NormalText")
@@ -185,9 +287,9 @@ private:
             .Padding(2.0f)
             [
                 SNew(STextBlock)
-                .Text_Lambda([this]() -> FText {
-                    return FText::FromString(!SelectedSession.StartTime.IsEmpty()
-                        ? FString::Printf(TEXT("Start Time: %s"), *SelectedSession.StartTime)
+                .Text_Lambda([this, Session]() -> FText {
+                    return FText::FromString(!Session.StartTime.IsEmpty()
+                        ? FString::Printf(TEXT("Start Time: %s"), *Session.StartTime)
                         : FString(TEXT("Start Time: Unknown")));
                 })
                 .TextStyle(FAppStyle::Get(), "NormalText")
@@ -198,9 +300,9 @@ private:
             .Padding(2.0f)
             [
                 SNew(STextBlock)
-                .Text_Lambda([this]() -> FText {
-                    return FText::FromString(!SelectedSession.EndTime.IsEmpty()
-                        ? FString::Printf(TEXT("End Time: %s"), *SelectedSession.EndTime)
+                .Text_Lambda([this, Session]() -> FText {
+                    return FText::FromString(!Session.EndTime.IsEmpty()
+                        ? FString::Printf(TEXT("End Time: %s"), *Session.EndTime)
                         : FString(TEXT("End Time: Unknown")));
                 })
                 .TextStyle(FAppStyle::Get(), "NormalText")
@@ -229,9 +331,9 @@ private:
 					.HAlign(HAlign_Left)
 					[
 						SNew(STextBlock)
-						.Text_Lambda([this]() -> FText {
+						.Text_Lambda([this, Session]() -> FText {
 							FString MetaDataString;
-							for (const auto& Pair : SelectedSession.MetaData)
+							for (const auto& Pair : Session.MetaData)
 							{
 								MetaDataString += FString::Printf(TEXT("%s: %s\n"), *Pair.Key, *Pair.Value);
 							}
@@ -245,6 +347,7 @@ private:
 	        ]
         ];
 	}
+	
 	FText GetColorScaleFactorText() const
 	{
 		return FText::FromString(FString::SanitizeFloat(GetColorScaleFactor()));
@@ -254,7 +357,7 @@ private:
 		return EdMode->GetColorScaleFactor(); // EdMode から現在の値を取得
 	}
 
-	void OnColorScaleFactorChanged(float NewValue)
+	void OnColorScaleFactorChanged(float NewValue) const
 	{
 		EdMode->SetColorScaleFactor(NewValue); // EdMode に新しい値を設定
 		EdMode->RefreshDrawPositions(); // 描画位置を更新
@@ -265,45 +368,15 @@ private:
 		return EdMode->IsDrawZAxis() ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
 	}
 
-	void OnZAxisCheckStateChanged(ECheckBoxState NewState)
+	void OnZAxisCheckStateChanged(ECheckBoxState NewState) const
 	{
 		EdMode->SetDrawZAxis(NewState == ECheckBoxState::Checked);
-		LoadHeatMap(EdMode->IsDrawZAxis());
 	}
 
-	void LoadHeatMap(bool zVisualize = false)
-	{
-		Client.SetConfig(HostName);
-		Client.GetHeatMap(
-			SelectedSession.ProjectId,
-			SelectedSession.SessionId,
-			[this](TArray<FPlaySessionHeatmapResponseDto> HeatmapList)
-			{
-				// for (const FPlaySessionHeatmapResponseDto& HeatmapData : HeatmapList)
-				// {
-					// UE_LOG(LogTemp, Log, TEXT("X: %f"), HeatmapData.X);
-					// UE_LOG(LogTemp, Log, TEXT("Y: %f"), HeatmapData.Y);
-					// UE_LOG(LogTemp, Log, TEXT("Z: %f"), HeatmapData.Z);
-					// UE_LOG(LogTemp, Log, TEXT("Density: %f"), HeatmapData.Density);
-				// }
-				EdMode->SetHeatmapData(HeatmapList);
-				EdMode->RefreshDrawPositions();
-			},
-			[this](FString Message)
-			{
-				UE_LOG(LogTemp, Error, TEXT("Failed to get heatmap data: %s"), *Message);
-				FText DialogText = FText::FromString(Message);
-				FMessageDialog::Open(EAppMsgType::Ok, DialogText);
-			},
-			300,
-			zVisualize
-		);
-	}
-
-	void ActivateHeatmap()
+	static void ActivateHeatmap()
 	{
 		// Gizmoの表示モードが有効かどうかを確認
-		if (!GLevelEditorModeTools().IsModeActive(FHeatMapEdMode::EM_HeatMapEdMode))
+		if (GLevelEditorModeToolsIsValid() && !GLevelEditorModeTools().IsModeActive(FHeatMapEdMode::EM_HeatMapEdMode))
 		{
 			// モードが無効な場合は有効にする
 			GLevelEditorModeTools().ActivateMode(FHeatMapEdMode::EM_HeatMapEdMode);
@@ -316,9 +389,8 @@ private:
 
 	void DeactivateHeatMap()
 	{
-		if (GLevelEditorModeTools().IsModeActive(FHeatMapEdMode::EM_HeatMapEdMode))
+		if (EdMode.Get() != nullptr && GLevelEditorModeToolsIsValid() && GLevelEditorModeTools().GetActiveMode(FHeatMapEdMode::EM_HeatMapEdMode))
 		{
-			// モードが有効な場合は無効にする
 			GLevelEditorModeTools().DeactivateMode(FHeatMapEdMode::EM_HeatMapEdMode);
 			UE_LOG(LogTemp, Warning, TEXT("Custom Gizmo Mode Deactivated"));
 		}

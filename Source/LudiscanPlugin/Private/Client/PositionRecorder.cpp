@@ -15,8 +15,8 @@ UPositionRecorder::UPositionRecorder(): StartTime(0), WorldContext(nullptr)
 void UPositionRecorder::CreateSession(
 	UWorld* Context,
 	int NewProjectId,
-	FString SessionTItle,
-	TFunction<void(FPlaySessionCreate)> OnResponse
+	FString SessionTitle,
+	TFunction<void(FPlaySession)> OnResponse
 )
 {
 	FString DeviceId = FPlatformProcess::ComputerName();
@@ -30,13 +30,13 @@ void UPositionRecorder::CreateSession(
 	extraData.Add("baz", "qux");
 	Client.CreateSession(
 		NewProjectId,
-		SessionTItle,
+		SessionTitle,
 		DeviceId,
 		platform,
 		appVersion,
 		LevelName,
 		extraData,
-		[this, OnResponse](FPlaySessionCreate PlaySession) {
+		[this, OnResponse](FPlaySession PlaySession) {
 			PlaySessionCreate = PlaySession;
 			OnResponse(PlaySession);
 		}
@@ -62,7 +62,7 @@ void UPositionRecorder::StopRecording() {
 void UPositionRecorder::FinishedRecording()
 {
 	StopRecording();
-	if (PlaySessionCreate.isPlaying)
+	if (PlaySessionCreate.bIsPlaying)
 	{
 		auto Data = GetPositionData();
 		UE_LOG(LogTemp, Warning, TEXT("Data size: %d"), Data.Num());
@@ -73,17 +73,17 @@ void UPositionRecorder::FinishedRecording()
 		// }
 		int PlayerCount = WorldContext->GetNumPlayerControllers();
 		Client.CreatePositionsPost(
-			PlaySessionCreate.projectId,
-			PlaySessionCreate.sessionId,
+			PlaySessionCreate.ProjectId,
+			PlaySessionCreate.SessionId,
 			PlayerCount,
 			Data.Num(),
 			Data,
 			[this]() {
 				UE_LOG(LogTemp, Log, TEXT("Positions sent successfully."));
 				Client.FinishedSession(
-					PlaySessionCreate.projectId,
-					PlaySessionCreate.sessionId,
-					[this](FPlaySessionCreate PlaySession) {
+					PlaySessionCreate.ProjectId,
+					PlaySessionCreate.SessionId,
+					[this](FPlaySession PlaySession) {
 						UE_LOG(LogTemp, Log, TEXT("Session finished successfully."));
 					}
 				);
@@ -93,7 +93,7 @@ void UPositionRecorder::FinishedRecording()
 }
 
 void UPositionRecorder::RecordPlayerPositions() {
-	if (!WorldContext || PlaySessionCreate.sessionId == 0) {
+	if (!WorldContext || PlaySessionCreate.SessionId == 0) {
 		UE_LOG(LogTemp, Warning, TEXT("World context not set."));
 		return;
 	}

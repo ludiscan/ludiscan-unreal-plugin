@@ -46,6 +46,7 @@ public:
 					[
 						SAssignNew(SessionWidget, SSelectSessionWidget)
 						.OnSessionSelected(this, &SLudiscanMainWidget::OnSessionSelected)
+						.OnAllSessionSelected(this, &SLudiscanMainWidget::OnAllSessionSelected)
 					]
 					+ SWidgetSwitcher::Slot()
 					[
@@ -57,6 +58,42 @@ public:
 		Hostname = LudiscanClient::GetSaveApiHostName("https://yuhi.tokyo");
 	}
 
+	virtual ~SLudiscanMainWidget() override
+	{
+	    UE_LOG(LogTemp, Warning, TEXT("SLudiscanMainWidget Destructor Called"));
+
+	    if (HostnameInputBox.IsValid())
+	    {
+	        // HostnameInputBox.Reset();
+	        UE_LOG(LogTemp, Warning, TEXT("HostnameInputBox reset"));
+	    }
+
+	    if (HeatmapWidget.IsValid())
+	    {
+	    	HeatmapWidget->Unload();
+	        // HeatmapWidget.Reset();
+	        UE_LOG(LogTemp, Warning, TEXT("HeatmapWidget reset and unloaded"));
+	    }
+
+	    // if (ProjectWidget.IsValid())
+	    // {
+	    //     ProjectWidget.Reset();
+	    //     UE_LOG(LogTemp, Warning, TEXT("ProjectWidget reset"));
+	    // }
+	    //
+	    // if (SessionWidget.IsValid())
+	    // {
+	    //     SessionWidget.Reset();
+	    //     UE_LOG(LogTemp, Warning, TEXT("SessionWidget reset"));
+	    // }
+	    //
+	    // if (WidgetSwitcher.IsValid())
+	    // {
+	    //     WidgetSwitcher.Reset();
+	    //     UE_LOG(LogTemp, Warning, TEXT("WidgetSwitcher reset"));
+	    // }
+	}
+
 private:
 	TSharedPtr<SWidgetSwitcher> WidgetSwitcher;
 	TSharedPtr<SSelectProjectWidget> ProjectWidget;
@@ -66,12 +103,14 @@ private:
 	TSharedPtr<SEditableTextBox> HostnameInputBox;
 	FString Hostname = "";
 	FProject SelectedProject = FProject();
-	FPlaySessionResponseDto SelectedSession = FPlaySessionResponseDto();
+	FHeatMapTask SelectedTask = FHeatMapTask();
+	LudiscanClient Client = LudiscanClient();
 
 	void OnProjectSelected(TSharedPtr<FProject> Project)
 	{
 		UE_LOG(LogTemp, Log, TEXT("Selected Project: %d"), Project->Id);
 		SelectedProject = *Project;
+		LudiscanClient::SetSaveProjectId(SelectedProject.Id);
 		if (WidgetSwitcher.IsValid())
 		{
 			WidgetSwitcher->SetActiveWidget(SessionWidget.ToSharedRef());
@@ -82,18 +121,15 @@ private:
 		}
 	}
 
-	void OnSessionSelected(TSharedPtr<FPlaySessionResponseDto> Session)
+	void OnSessionSelected(TSharedPtr<FPlaySession> InSession)
 	{
-		UE_LOG(LogTemp, Log, TEXT("Selected Session: %d"), Session->SessionId);
-		if (WidgetSwitcher.IsValid())
-		{
-			WidgetSwitcher->SetActiveWidget(HeatmapWidget.ToSharedRef());
-			if (HeatmapWidget.IsValid())
-			{
-				SelectedSession = *Session;
-				HeatmapWidget->Reload(Hostname, *Session);
-			}
-		}
+		UE_LOG(LogTemp, Log, TEXT("Selected Session: %d"), InSession->SessionId);
+		CreateTaskAndActivateHeatmap(*InSession);
+	}
+
+	void OnAllSessionSelected()
+	{
+		
 	}
 
 	FText GetHostName() const
@@ -133,12 +169,19 @@ private:
 			}
 			else if (ActiveWidget == SessionWidget)
 			{
-				HeatmapWidget->Unload();
-				SessionWidget->Reload(Hostname, SelectedProject);
+				if (SelectedProject.Id != 0)
+                {
+					HeatmapWidget->Unload();
+					SessionWidget->Reload(Hostname, SelectedProject);
+                }
 			}
 			else if (ActiveWidget == HeatmapWidget)
 			{
-				HeatmapWidget->Reload(Hostname, SelectedSession);
+				if (SelectedTask.TaskId != FHeatMapTask().TaskId)
+                {
+                    HeatmapWidget->Unload();
+                    HeatmapWidget->Reload(Hostname, SelectedTask);
+                }
 			}
 		}
 		return FReply::Handled();
@@ -215,4 +258,42 @@ private:
 		WidgetSwitcher->SetActiveWidget(HeatmapWidget.ToSharedRef());
 		return FReply::Handled();
 	}
+
+	void CreateTaskAndActivateHeatmap(
+		const FPlaySession& InSession = FPlaySession(),
+		int InStepSize = 300,
+		bool InZVisible = false
+		)
+    {
+		if (InSession.SessionId == FPlaySession().SessionId)
+		{
+			
+		} else
+		{
+			Client.CreateSessionHeatMap(
+				InSession.ProjectId,
+				InSession.SessionId,
+				[this](FHeatMapTask Task) {
+					UE_LOG(LogTemp, Log, TEXT("Created heatmap task: %d"), Task.TaskId);
+					Task.Log();
+					if (WidgetSwitcher.IsValid())
+					{
+						WidgetSwitcher->SetActiveWidget(HeatmapWidget.ToSharedRef());
+						if (HeatmapWidget.IsValid())
+						{
+							HeatmapWidget->Reload(Hostname, Task);
+						}
+					}
+                },
+                [this](const FString& Message) {
+                    UE_LOG(LogTemp, Error, TEXT("Failed to create heatmap tasks: %s"), *Message);
+                    FText DialogText = FText::FromString(Message);
+                    FMessageDialog::Open(EAppMsgType::Ok, DialogText);
+                },
+                InStepSize,
+                InZVisible
+			);
+		}
+        
+    }
 };

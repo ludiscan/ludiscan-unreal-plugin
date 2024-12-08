@@ -1,10 +1,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "FPlaySessionHeatmapResponseDto.h"
-#include "FPlaySessionResponse.h"
+#include "FHeatMapTask.h"
+#include "FPlaySession.h"
 #include "Project.h"
-#include "Client/PlaySessionCreate.h"
 #include "Interfaces/IHttpRequest.h"
 #include "HttpModule.h"
 #include "SettingsManager.h"
@@ -57,17 +56,23 @@ public:
     void FinishedSession(
         int projectId,
         int sessionId,
-        TFunction<void(FPlaySessionCreate)> OnSuccess = [](FPlaySessionCreate PlaySession) {}
+        TFunction<void(FPlaySession)> OnSuccess = [](FPlaySession PlaySession) {}
     );
 
-    void GetHeatMap(
+    void CreateSessionHeatMap(
         int projectId,
         int sessionId,
-        TFunction<void(TArray<FPlaySessionHeatmapResponseDto>)> OnSuccess,
+        TFunction<void(FHeatMapTask)> OnSuccess,
         TFunction<void(FString)> OnFailure = [](FString Message) {},
         int stepSize = 300,
         bool zVisualize = false
-    );
+    ) const;
+
+	void GetTask(
+		const FHeatMapTask& Task,
+		TFunction<void(FHeatMapTask)> OnSuccess,
+		TFunction<void(FString)> OnFailure = [](FString Message) {}
+	) const;
 
     void CreateSession(
         int projectId,
@@ -77,19 +82,19 @@ public:
         const FString& AppVersion,
         const FString& levelName,
         TMap<FString, FString> ExtraData,
-        TFunction<void(FPlaySessionCreate)> OnResponse
-    );
+        TFunction<void(FPlaySession)> OnResponse
+    ) const;
 
     void GetProjects(
         TFunction<void(TArray<FProject>)> OnSuccess,
         TFunction<void(FString)> OnFailure = [](FString Message) {}
-    );
+    ) const;
 
     void GetSessions(
         int projectId,
-        TFunction<void(TArray<FPlaySessionResponseDto>)> OnSuccess,
+        TFunction<void(TArray<FPlaySession>)> OnSuccess,
         TFunction<void(FString)> OnFailure = [](FString Message) {}
-    );
+    ) const;
 
 private:
 
@@ -98,9 +103,7 @@ private:
 
     static TArray<uint8> ConstructBinaryData(int players, int stampCount, const TArray<TArray<FPlayerPosition>>& allPositions);
 
-    TSharedRef<IHttpRequest> CreateHttpContent(const TArray<uint8>& BinaryData);
-
-    static bool ConvertJsonToPlaySession(const FString& JsonString, FPlaySessionCreate& OutPlaySession);
+    static TSharedRef<IHttpRequest> CreateHttpContent(const TArray<uint8>& BinaryData);
 };
 
 inline const FString LudiscanClient::SaveApiHostNameKey = TEXT("LudiscanApiHostName");
@@ -190,7 +193,7 @@ inline void LudiscanClient::CreatePositionsPost(int projectId, int sessionId, in
 	Request->ProcessRequest();
 }
 
-inline void LudiscanClient::FinishedSession(int projectId, int sessionId, TFunction<void(FPlaySessionCreate)> OnSuccess)
+inline void LudiscanClient::FinishedSession(int projectId, int sessionId, TFunction<void(FPlaySession)> OnSuccess)
 {
 	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
 	Request->SetURL(bApiHostName + "/api/v0/projects/" + FString::FromInt(projectId) + "/play_session/" + FString::FromInt(sessionId) + "/finish");
@@ -199,25 +202,37 @@ inline void LudiscanClient::FinishedSession(int projectId, int sessionId, TFunct
 	Request->OnProcessRequestComplete().BindLambda([this, OnSuccess](FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful) {
 		if (bWasSuccessful && Response.IsValid()) {
 			FString ResponseContent = Response->GetContentAsString();
-			FPlaySessionCreate PlaySession;
-			if (ConvertJsonToPlaySession(ResponseContent, PlaySession)) {
-				OnSuccess(PlaySession);
+			TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ResponseContent);
+			if (TSharedPtr<FJsonObject> JsonObject; FJsonSerializer::Deserialize(Reader, JsonObject) && JsonObject.IsValid()) {
+				if (FPlaySession PlaySession; FPlaySession::ParseDataFromJson(JsonObject, PlaySession)) {
+					OnSuccess(PlaySession);
+				}
 			}
 		}
 	});
 	Request->ProcessRequest();
 }
 
-inline void LudiscanClient::GetHeatMap(int projectId, int sessionId,
-	TFunction<void(TArray<FPlaySessionHeatmapResponseDto>)> OnSuccess, TFunction<void(FString)> OnFailure, int stepSize,
-	bool zVisualize)
+inline void LudiscanClient::CreateSessionHeatMap(
+	int projectId,
+	int sessionId,
+	TFunction<void(FHeatMapTask)> OnSuccess,
+	TFunction<void(FString)> OnFailure,
+	int stepSize,
+	bool zVisualize) const
 {
 	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
-	FString Url = bApiHostName + FString::Printf(TEXT("/api/v0/projects/%d/play_session/%d/player_position_log/heatmap"), projectId, sessionId);
-	Url += FString::Printf(TEXT("?stepSize=%d"), stepSize);
-	Url += zVisualize ? TEXT("&zVisualize=true") : TEXT("&zVisualize=false");
+	const FString Url = bApiHostName + FString::Printf(TEXT("/api/v0/heatmap/projects/%d/play_session/%d/tasks"), projectId, sessionId);
 	Request->SetURL(Url);
-	Request->SetVerb("GET");
+	Request->SetVerb("POST");
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject());
+	JsonObject->SetNumberField("stepSize", stepSize);
+	JsonObject->SetBoolField("zVisible", zVisualize);
+	FString RequestBody;
+	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&RequestBody);
+	FJsonSerializer::Serialize(JsonObject.ToSharedRef(), Writer);
+	Request->SetContentAsString(RequestBody);
+	Request->SetHeader("Content-Type", "application/json");
 	// 完了時のログ出力
 	Request->OnProcessRequestComplete().BindLambda([OnSuccess, OnFailure](FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful) {
 		if (bWasSuccessful && Response.IsValid())
@@ -226,26 +241,62 @@ inline void LudiscanClient::GetHeatMap(int projectId, int sessionId,
 			FString ResponseContent = Response->GetContentAsString();
 
 			// レスポンスのJSONを解析
-			TArray<FPlaySessionHeatmapResponseDto> HeatmapList;
+			FHeatMapTask Task;
                 
-			if (ResponseContent != "[]" && FPlaySessionHeatmapResponseDto::ParseArrayFromJson(ResponseContent, HeatmapList))
+			if (FHeatMapTask::ParseDataFromJson(ResponseContent, Task))
 			{
-				// JSONの解析が成功した場合
-				return OnSuccess(HeatmapList);
+				OnSuccess(Task);
+				return;
 			}
 			UE_LOG(LogTemp, Error, TEXT("Failed to deserialize the JSON response."));
-			return OnFailure("Failed to deserialize the JSON response.");
+			OnFailure("Failed to deserialize the JSON response.");
+			return;
 		}
-		else
-		{
-			UE_LOG(LogTemp, Error, TEXT("Request failed"));
-			return OnFailure("Request failed");
-		}
+		UE_LOG(LogTemp, Error, TEXT("Request failed"));
+		return OnFailure("Request failed");
 	});
 
 
 	Request->ProcessRequest();
 }
+
+inline void LudiscanClient::GetTask(
+	const FHeatMapTask& Task,
+	TFunction<void(FHeatMapTask)> OnSuccess,
+	TFunction<void(FString)> OnFailure) const
+{
+	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
+	const FString Url = bApiHostName + FString::Printf(TEXT("/api/v0/heatmap/tasks/%d"), Task.TaskId);
+	Request->SetURL(Url);
+	Request->SetVerb("GET");
+
+	// 完了時のログ出力
+	Request->OnProcessRequestComplete().BindLambda([OnSuccess, OnFailure](FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful) {
+		if (bWasSuccessful && Response.IsValid())
+		{
+			// レスポンスを文字列として取得
+			FString ResponseContent = Response->GetContentAsString();
+
+			// レスポンスのJSONを解析
+			FHeatMapTask Task;
+                
+			if (FHeatMapTask::ParseDataFromJson(ResponseContent, Task))
+			{
+				OnSuccess(Task);
+				return;
+			}
+			UE_LOG(LogTemp, Error, TEXT("Failed to deserialize the JSON response."));
+			OnFailure("Failed to deserialize the JSON response.");
+			return;
+		}
+		UE_LOG(LogTemp, Error, TEXT("Request failed"));
+		return OnFailure("Request failed");
+	});
+
+
+	Request->ProcessRequest();
+}
+
 
 inline void LudiscanClient::CreateSession(
 	int projectId,
@@ -255,7 +306,7 @@ inline void LudiscanClient::CreateSession(
 	const FString& AppVersion,
 	const FString& levelName,
 	TMap<FString, FString> ExtraData,
-	TFunction<void(FPlaySessionCreate)> OnResponse)
+	TFunction<void(FPlaySession)> OnResponse) const
 {
 	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
 	Request->SetURL(bApiHostName + "/api/v0/projects/" + FString::FromInt(projectId) + "/play_session");
@@ -288,17 +339,21 @@ inline void LudiscanClient::CreateSession(
 		if (bWasSuccessful && Response.IsValid())
 		{
 			FString ResponseContent = Response->GetContentAsString();
-			FPlaySessionCreate PlaySession;
-			if (ConvertJsonToPlaySession(ResponseContent, PlaySession))
+			TSharedPtr<FJsonObject> JsonObject;
+			TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ResponseContent);
+			if (FJsonSerializer::Deserialize(Reader, JsonObject) && JsonObject.IsValid())
 			{
-				OnResponse(PlaySession);
+				if (FPlaySession PlaySession; FPlaySession::ParseDataFromJson(JsonObject, PlaySession))
+				{
+					OnResponse(PlaySession);
+				}
 			}
 		}
 	});
 	Request->ProcessRequest();
 }
 
-inline void LudiscanClient::GetProjects(TFunction<void(TArray<FProject>)> OnSuccess, TFunction<void(FString)> OnFailure)
+inline void LudiscanClient::GetProjects(TFunction<void(TArray<FProject>)> OnSuccess, TFunction<void(FString)> OnFailure) const
 {
 	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
 	Request->SetURL(bApiHostName + "/api/v0/projects/");
@@ -311,22 +366,18 @@ inline void LudiscanClient::GetProjects(TFunction<void(TArray<FProject>)> OnSucc
 			if (FProject::ParseArrayFromJson(ResponseContent, Projects))
 			{
 				OnSuccess(Projects);
+				return;
 			}
-			else
-			{
-				OnFailure("Failed to parse JSON response.");
-			}
+			OnFailure("Failed to parse JSON response.");
+			return;
 		}
-		else
-		{
-			OnFailure("Request failed.");
-		}
+		OnFailure("Request failed.");
 	});
 	Request->ProcessRequest();
 }
 
-inline void LudiscanClient::GetSessions(int projectId, TFunction<void(TArray<FPlaySessionResponseDto>)> OnSuccess,
-	TFunction<void(FString)> OnFailure)
+inline void LudiscanClient::GetSessions(int projectId, TFunction<void(TArray<FPlaySession>)> OnSuccess,
+	TFunction<void(FString)> OnFailure) const
 {
 	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
 	Request->SetURL(bApiHostName + FString::Printf(TEXT("/api/v0/projects/%d/play_session?limit=%d&offset=%d"), projectId, 30, 0));
@@ -337,21 +388,17 @@ inline void LudiscanClient::GetSessions(int projectId, TFunction<void(TArray<FPl
 		{
 			UE_LOG(LogTemp, Log, TEXT("Request succeeded"));
 			FString ResponseContent = Response->GetContentAsString();
-			TArray<FPlaySessionResponseDto> PlaySessionData;
-			if (FPlaySessionResponseDto::ParseArrayFromJson(ResponseContent, PlaySessionData))
+			TArray<FPlaySession> PlaySessionData;
+			if (FPlaySession::ParseArrayFromJson(ResponseContent, PlaySessionData))
 			{
 				UE_LOG(LogTemp, Log, TEXT("JSON parsed successfully"));
 				OnSuccess(PlaySessionData);
+				return;
 			}
-			else
-			{
-				OnFailure("Failed to parse JSON response.");
-			}
+			OnFailure("Failed to parse JSON response.");
+			return;
 		}
-		else
-		{
-			OnFailure("Request failed.");
-		}
+		OnFailure("Request failed.");
 	});
         
 	Request->ProcessRequest();
@@ -433,54 +480,4 @@ inline TSharedRef<IHttpRequest> LudiscanClient::CreateHttpContent(const TArray<u
 	Request->SetContent(PayloadData);
         
 	return Request;
-}
-
-inline bool LudiscanClient::ConvertJsonToPlaySession(const FString& JsonString, FPlaySessionCreate& OutPlaySession)
-{
-	// JSON文字列を解析
-	TSharedPtr<FJsonObject> JsonObject;
-	TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(JsonString);
-
-	if (FJsonSerializer::Deserialize(Reader, JsonObject) && JsonObject.IsValid())
-	{
-		OutPlaySession.sessionId = JsonObject->GetIntegerField("sessionId");
-		UE_LOG(LogTemp, Log, TEXT("Session ID: %d"), OutPlaySession.sessionId);
-		OutPlaySession.projectId = JsonObject->GetIntegerField("projectId");
-		UE_LOG(LogTemp, Log, TEXT("Project ID: %d"), OutPlaySession.projectId);
-		OutPlaySession.name = JsonObject->GetStringField("name");
-		UE_LOG(LogTemp, Log, TEXT("Name: %s"), *OutPlaySession.name);
-		OutPlaySession.deviceId = JsonObject->GetStringField("deviceId");
-		UE_LOG(LogTemp, Log, TEXT("Device ID: %s"), *OutPlaySession.deviceId);
-		OutPlaySession.platform = JsonObject->GetStringField("platform");
-		UE_LOG(LogTemp, Log, TEXT("Platform: %s"), *OutPlaySession.platform);
-		OutPlaySession.appVersion = JsonObject->GetStringField("appVersion");
-		UE_LOG(LogTemp, Log, TEXT("App Version: %s"), *OutPlaySession.appVersion);
-
-		// Optionalな値はIsFieldPresentを使用してチェック
-		if (FString StartTime; JsonObject->HasField("startTime") && JsonObject->TryGetStringField("startTime", StartTime))
-		{
-			OutPlaySession.startTime = StartTime;
-			UE_LOG(LogTemp, Log, TEXT("Start Time: %s"), *OutPlaySession.startTime);
-		}
-		else
-		{
-			OutPlaySession.startTime = TEXT("N/A"); // デフォルト値
-		}
-
-		if (FString EndTime; JsonObject->HasField("endTime") && JsonObject->TryGetStringField("endTime", EndTime))
-		{
-			OutPlaySession.endTime = EndTime;
-			UE_LOG(LogTemp, Log, TEXT("End Time: %s"), *OutPlaySession.endTime);
-		}
-		else
-		{
-			OutPlaySession.endTime = TEXT("N/A"); // デフォルト値
-		}
-
-		OutPlaySession.isPlaying = JsonObject->GetBoolField("isPlaying");
-
-		return true;
-	}
-
-	return false;
 }

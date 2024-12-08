@@ -1,20 +1,23 @@
 #pragma once
-#include "Client/FPlaySessionResponse.h"
+#include "Client/FPlaySession.h"
 #include "Client/LudiscanClient.h"
 
-DECLARE_DELEGATE_OneParam(FOnSessionSelected, TSharedPtr<FPlaySessionResponseDto>);
+DECLARE_DELEGATE_OneParam(FOnSessionSelected, TSharedPtr<FPlaySession>);
+DECLARE_DELEGATE(FOnAllSessionSelected);
 
 class SSelectSessionWidget: public SCompoundWidget
 {
 public:
 	SLATE_BEGIN_ARGS(SSelectSessionWidget) {}
 	SLATE_EVENT(FOnSessionSelected, OnSessionSelected)
+	SLATE_EVENT(FOnAllSessionSelected, OnAllSessionSelected)
 	SLATE_END_ARGS()
 
 	void Construct(const FArguments& Args)
 	{
 		
         OnSessionSelected = Args._OnSessionSelected;
+		OnAllSessionSelected = Args._OnAllSessionSelected;
 
         ChildSlot
         [
@@ -122,7 +125,7 @@ public:
 					.Orientation(Orient_Horizontal) // 横方向のスクロールを有効にする
 					+ SScrollBox::Slot()
 					[
-						SAssignNew(SessionListView, SListView<TSharedPtr<FPlaySessionResponseDto>>)
+						SAssignNew(SessionListView, SListView<TSharedPtr<FPlaySession>>)
 						.ItemHeight(40)
 						.ListItemsSource(&FilteredSessionItems)
 						.OnGenerateRow(this, &SSelectSessionWidget::OnGenerateSessionRow)
@@ -173,6 +176,25 @@ public:
 					]
 	            ]
             ]
+
+	        + SVerticalBox::Slot()
+	        .AutoHeight()
+	        .Padding(5.0f)
+	        [
+	            SNew(SHorizontalBox)
+	            + SHorizontalBox::Slot()
+	            .FillWidth(1.0f)
+	            + SHorizontalBox::Slot()
+	            .AutoWidth()
+	            .Padding(2.0f)
+	            [
+	                SNew(SButton)
+	                .Text(FText::FromString("Select All"))
+	                .OnClicked(this, &SSelectSessionWidget::OnSelectAllButtonClicked)
+	            ]
+				+ SHorizontalBox::Slot()
+				.FillWidth(1.0f)
+	        ]
         ];
 	}
 
@@ -182,14 +204,26 @@ public:
 		LoadSessions(HostName);
 	}
 
+	virtual ~SSelectSessionWidget() override
+	{
+		if (OnSessionSelected.IsBound())
+		{
+			OnSessionSelected.Unbind();
+		}
+		if (OnAllSessionSelected.IsBound())
+		{
+			OnAllSessionSelected.Unbind();
+		}
+	}
 private:
 	FProject SelectedProject = FProject();
-	TArray<TSharedPtr<FPlaySessionResponseDto>> SessionItems;
-	TArray<TSharedPtr<FPlaySessionResponseDto>> FilteredSessionItems;
-	TSharedPtr<SListView<TSharedPtr<FPlaySessionResponseDto>>> SessionListView;
+	TArray<TSharedPtr<FPlaySession>> SessionItems;
+	TArray<TSharedPtr<FPlaySession>> FilteredSessionItems;
+	TSharedPtr<SListView<TSharedPtr<FPlaySession>>> SessionListView;
 	TSharedPtr<SEditableTextBox> FilterTextBox;
 	LudiscanClient Client = LudiscanClient();
 	FOnSessionSelected OnSessionSelected;
+	FOnAllSessionSelected OnAllSessionSelected;
 	// ソート状態を保持する変数
     FName CurrentSortColumn = "ID";
     EColumnSortMode::Type CurrentSortMode = EColumnSortMode::Ascending;
@@ -202,6 +236,15 @@ private:
 			return CurrentSortMode;
 		}
 		return EColumnSortMode::None;
+	}
+
+	FReply OnSelectAllButtonClicked()
+	{
+		if (OnAllSessionSelected.IsBound())
+		{
+			auto _ = OnAllSessionSelected.ExecuteIfBound();
+		}
+		return FReply::Handled();
 	}
 
     // ソート列とモードの切り替え
@@ -221,7 +264,7 @@ private:
 	void OnSortByID(const EColumnSortPriority::Type SortPriority, const FName& ColumnId, const EColumnSortMode::Type NewSortMode)
 	{
 		SetSortMode("ID");
-		FilteredSessionItems.Sort([this](const TSharedPtr<FPlaySessionResponseDto>& A, const TSharedPtr<FPlaySessionResponseDto>& B) {
+		FilteredSessionItems.Sort([this](const TSharedPtr<FPlaySession>& A, const TSharedPtr<FPlaySession>& B) {
 			return CurrentSortMode == EColumnSortMode::Ascending ? (A->SessionId < B->SessionId) : (A->SessionId > B->SessionId);
 		});
 		SessionListView->RequestListRefresh();
@@ -230,7 +273,7 @@ private:
     void OnSortByName(const EColumnSortPriority::Type SortPriority, const FName& ColumnId, const EColumnSortMode::Type NewSortMode)
     {
         SetSortMode("Name");
-        FilteredSessionItems.Sort([this](const TSharedPtr<FPlaySessionResponseDto>& A, const TSharedPtr<FPlaySessionResponseDto>& B) {
+        FilteredSessionItems.Sort([this](const TSharedPtr<FPlaySession>& A, const TSharedPtr<FPlaySession>& B) {
             return CurrentSortMode == EColumnSortMode::Ascending ? (A->Name < B->Name) : (A->Name > B->Name);
         });
         SessionListView->RequestListRefresh();
@@ -239,7 +282,7 @@ private:
     void OnSortByPlatform(const EColumnSortPriority::Type SortPriority, const FName& ColumnId, const EColumnSortMode::Type NewSortMode)
     {
         SetSortMode("Platform");
-        FilteredSessionItems.Sort([this](const TSharedPtr<FPlaySessionResponseDto>& A, const TSharedPtr<FPlaySessionResponseDto>& B) {
+        FilteredSessionItems.Sort([this](const TSharedPtr<FPlaySession>& A, const TSharedPtr<FPlaySession>& B) {
             return CurrentSortMode == EColumnSortMode::Ascending ? (A->Platform < B->Platform) : (A->Platform > B->Platform);
         });
         SessionListView->RequestListRefresh();
@@ -248,17 +291,17 @@ private:
     void OnSortByDeviceId(const EColumnSortPriority::Type SortPriority, const FName& ColumnId, const EColumnSortMode::Type NewSortMode)
     {
         SetSortMode("Device ID");
-        FilteredSessionItems.Sort([this](const TSharedPtr<FPlaySessionResponseDto>& A, const TSharedPtr<FPlaySessionResponseDto>& B) {
+        FilteredSessionItems.Sort([this](const TSharedPtr<FPlaySession>& A, const TSharedPtr<FPlaySession>& B) {
             return CurrentSortMode == EColumnSortMode::Ascending ? (A->DeviceId < B->DeviceId) : (A->DeviceId > B->DeviceId);
         });
         SessionListView->RequestListRefresh();
     }
 
-	TSharedRef<ITableRow> OnGenerateSessionRow(TSharedPtr<FPlaySessionResponseDto> InItem, const TSharedRef<STableViewBase>& OwnerTable)
+	TSharedRef<ITableRow> OnGenerateSessionRow(TSharedPtr<FPlaySession> InItem, const TSharedRef<STableViewBase>& OwnerTable)
 	{
 		FString DisplayTime = FormatTime(InItem->EndTime.IsEmpty() ? InItem->StartTime : InItem->EndTime);
 
-		return SNew(STableRow<TSharedPtr<FPlaySessionResponseDto>>, OwnerTable)
+		return SNew(STableRow<TSharedPtr<FPlaySession>>, OwnerTable)
 		.Style(&FAppStyle::Get().GetWidgetStyle<FTableRowStyle>("TableView.Row"))
 		[
 			SNew(SBorder)
@@ -324,7 +367,7 @@ private:
 		}
 		else
 		{
-			FilteredSessionItems = SessionItems.FilterByPredicate([&](const TSharedPtr<FPlaySessionResponseDto>& Session) {
+			FilteredSessionItems = SessionItems.FilterByPredicate([&](const TSharedPtr<FPlaySession>& Session) {
 				return Session->Name.Contains(FilterText) ||
 					   Session->Platform.Contains(FilterText) ||
 					   Session->DeviceId.Contains(FilterText) ||
@@ -343,15 +386,17 @@ private:
 
 	void LoadSessions(FString HostName)
 	{
+		SessionItems.Empty();
+		OnFilterTextChanged(FilterTextBox->GetText());
 		Client.SetConfig(HostName);
 		Client.GetSessions(
 			SelectedProject.Id,
-			[this](TArray<FPlaySessionResponseDto> Sessions) {
+			[this](TArray<FPlaySession> Sessions) {
 				SessionItems.Reset();
-				for (const FPlaySessionResponseDto& Session : Sessions)
+				for (const FPlaySession& Session : Sessions)
 				{
 					UE_LOG(LogTemp, Log, TEXT("Session: %s"), *Session.Name);
-					SessionItems.Add(MakeShared<FPlaySessionResponseDto>(Session));
+					SessionItems.Add(MakeShared<FPlaySession>(Session));
 				}
 				OnFilterTextChanged(FilterTextBox->GetText());
 				if (SessionItems.Num() == 0)
@@ -368,17 +413,17 @@ private:
 		);
 	}
 
-	void OnSelectionChanged(TSharedPtr<FPlaySessionResponseDto> Item, ESelectInfo::Type SelectInfo)
+	void OnSelectionChanged(TSharedPtr<FPlaySession> Item, ESelectInfo::Type SelectInfo)
 	{
 		if (Item != nullptr && Item.IsValid())
 		{
-			OnSessionSelected.ExecuteIfBound(Item);
+			auto _ = OnSessionSelected.ExecuteIfBound(Item);
 		}
 	}
 	void OnSortByTime(const EColumnSortPriority::Type SortPriority, const FName& ColumnId, const EColumnSortMode::Type NewSortMode)
 	{
 		SetSortMode("Time");
-		FilteredSessionItems.Sort([this](const TSharedPtr<FPlaySessionResponseDto>& A, const TSharedPtr<FPlaySessionResponseDto>& B) {
+		FilteredSessionItems.Sort([this](const TSharedPtr<FPlaySession>& A, const TSharedPtr<FPlaySession>& B) {
 			FString TimeA = A->EndTime.IsEmpty() ? A->StartTime : A->EndTime;
 			FString TimeB = B->EndTime.IsEmpty() ? B->StartTime : B->EndTime;
 			return CurrentSortMode == EColumnSortMode::Ascending ? (TimeA < TimeB) : (TimeA > TimeB);
