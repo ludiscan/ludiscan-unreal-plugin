@@ -276,6 +276,7 @@ private:
 				[this](FHeatMapTask Task) {
 					UE_LOG(LogTemp, Log, TEXT("Created heatmap task: %d"), Task.TaskId);
 					Task.Log();
+					SelectedTask = Task;
 					if (WidgetSwitcher.IsValid())
 					{
 						WidgetSwitcher->SetActiveWidget(HeatmapWidget.ToSharedRef());

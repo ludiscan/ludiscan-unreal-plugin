@@ -20,7 +20,7 @@ public:
 		ChildSlot
 		.Padding(5)
 		[
-			SNew(SVerticalBox)
+			SAssignNew(VerticalBox, SVerticalBox)
 			// 現在のセッション情報を表示
 	        + SVerticalBox::Slot()
 	        .FillHeight(1.0f)
@@ -29,7 +29,7 @@ public:
 				SNew(SScrollBox)
 		        + SScrollBox::Slot()
 		        [
-		            SessionInfoRow()
+		        	SessionInfoRow()
 		        ]
 	        ]
 			// 色強調度のスライダー
@@ -108,6 +108,10 @@ private:
 	FTimerHandle TaskPollingTimerHandle;
 	UWorld* World = GEditor->GetEditorWorldContext().World();
 
+	TSharedPtr<SVerticalBox> VerticalBox;
+
+	bool IsLoading = false;
+
 	// ポーリング間隔（秒単位）
 	const float TaskPollingInterval = 1.5f;
 
@@ -129,10 +133,12 @@ private:
 				false
 			);
 		}
+		Invalidate(EInvalidateWidgetReason::Paint);
 	}
 
 	void PollGetTask()
 	{
+		IsLoading = true;
 		Client.GetTask(
 			SelectedTask,
 			[this](const FHeatMapTask& Task) {
@@ -140,6 +146,7 @@ private:
 				SelectedTask.Log();
 				if (SelectedTask.Status == FHeatMapTask::Completed)
 				{
+					IsLoading = false;
 					// タイマーを停止
 					if (World)
 	                {
@@ -157,6 +164,7 @@ private:
 					}
 				} else if (SelectedTask.Status == FHeatMapTask::Failed)
 				{
+					IsLoading = false;
 					if (World)
 					{
 						World->GetTimerManager().ClearTimer(TaskPollingTimerHandle);
@@ -166,6 +174,7 @@ private:
 					FMessageDialog::Open(EAppMsgType::Ok, DialogText);
 				} else
 				{
+					IsLoading = true;
 					// タスクがまだ進行中の場合、次のポーリングをスケジュール
 					if (World)
 					{
@@ -177,6 +186,7 @@ private:
 						);
 					}
 				}
+				Invalidate(EInvalidateWidgetReason::Paint);
 			},
 			[this](const FString& Message) {
 				// タイマーを停止
@@ -189,10 +199,22 @@ private:
 				FMessageDialog::Open(EAppMsgType::Ok, DialogText);
 			}
 		);
+		Invalidate(EInvalidateWidgetReason::Paint);
 	}
 	
 	TSharedRef<SBorder> SessionInfoRow()
 	{
+		if (IsLoading)
+		{
+			return SNew(SBorder)
+				.BorderBackgroundColor(FLinearColor(0.2f, 0.2f, 0.2f, 1.0f)) // 背景色
+				.Padding(FMargin(5.0f))
+				[
+					SNew(STextBlock)
+					.Text(FText::FromString("Loading..."))
+					.TextStyle(FAppStyle::Get(), "NormalText")
+				];
+		}
 		FPlaySession Session = SelectedTask.Session;
 		return SNew(SBorder)
         .BorderBackgroundColor(FLinearColor(0.2f, 0.2f, 0.2f, 1.0f)) // 背景色
