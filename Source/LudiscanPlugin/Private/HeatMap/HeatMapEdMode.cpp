@@ -1,30 +1,69 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "HeatMapEdMode.h"
-
+#include "HeatMap/HeatMapEdMode.h"
+#include "LudiscanPluginCommands.h"
 #include "Client/LudiscanClient.h"
 
-const FEditorModeID FHeatMapEdMode::EM_HeatMapEdMode = TEXT("EM_HeatMapEdMode");
+#define LOCTEXT_NAMESPACE "HeatMapEdModeEditorMode"
 
-FHeatMapEdMode::FHeatMapEdMode()
+const FEditorModeID UHeatMapEdMode::EM_HeatMapEdMode = TEXT("EM_HeatMapEdMode");
+
+FString UHeatMapEdMode::InteractiveToolName = TEXT("HeatMap_InteractiveTool");
+
+UHeatMapEdMode::UHeatMapEdMode()
 {
-	const float SavedFilter = LudiscanClient::GetSaveHeatmapColorScaleFilter(1.0f);
-	SetColorScaleFactor(SavedFilter);
-	const bool SavedZAxis = LudiscanClient::GetSaveHeatmapDrawZAxis(false);
-	SetDrawZAxis(SavedZAxis);
+
+	FModuleManager::Get().LoadModule("EditorStyle");
+
+	Info = FEditorModeInfo(UHeatMapEdMode::EM_HeatMapEdMode,
+	LOCTEXT("HeatMapMode", "ヒートマップモード"),
+	FSlateIcon(),
+	true);
 }
 
-FHeatMapEdMode::~FHeatMapEdMode()
+UHeatMapEdMode::~UHeatMapEdMode()
 {
 }
 
 
-void FHeatMapEdMode::Draw(const FSceneView* View, FPrimitiveDrawInterface* PDI)
+// void UHeatMapEdMode::Render(const FSceneView* View, FViewport* Viewport, FPrimitiveDrawInterface* PDI)
+// {
+// 	UBaseLegacyWidgetEdMode::Render(View, Viewport, PDI);
+// }
+
+void UHeatMapEdMode::SetHeatmapData(const TArray<FHeatmapData>& NewHeatmapData)
 {
-	FEdMode::Draw(View, PDI);
+	// 渡されたヒートマップデータを格納
+	HeatmapArray = NewHeatmapData;
+	CalculateBoundingBox();
+}
+
+void UHeatMapEdMode::Enter()
+{
+	UEdMode::Enter();
+	// 必要に応じて初期化コードを追加
+	// ツールの登録
+	RegisterTools();
+}
+
+void UHeatMapEdMode::Exit()
+{
+	SetHeatmapData(TArray<FHeatmapData>());
+	UEdMode::Exit();
+}
+
+void UHeatMapEdMode::RegisterTools()
+{
+	// no-op
+}
+
+void UHeatMapEdMode::Render(const FSceneView* View, FViewport* Viewport, FPrimitiveDrawInterface* PDI)
+{
+	Super::Render(View, Viewport, PDI);
+
 	// 描画位置と色をもとに点を描画
-	for (const TPair<FVector, FColor>& Data : DrawPositions)
+	for (TPair<FVector, FColor>& Data : DrawPositions)
 	{
 		if (!View->ViewFrustum.IntersectBox(Data.Key, FVector(20.0f, 20.0f, 20.0f)) || Data.Value.A == 0)  // ビューフラスタムとの交差判定
 		{
@@ -34,16 +73,27 @@ void FHeatMapEdMode::Draw(const FSceneView* View, FPrimitiveDrawInterface* PDI)
 	}
 }
 
-void FHeatMapEdMode::SetHeatmapData(const TArray<FHeatmapData>& NewHeatmapData)
+bool UHeatMapEdMode::UsesToolkits() const
 {
-	// 渡されたヒートマップデータを格納
-	HeatmapArray = NewHeatmapData;
-
-	CalculateBoundingBox();
+	return false;
 }
 
-void FHeatMapEdMode::CalculateBoundingBox()
+void UHeatMapEdMode::CreateToolkit()
 {
+	UEdMode::CreateToolkit();
+}
+
+TMap<FName, TArray<TSharedPtr<FUICommandInfo>>> UHeatMapEdMode::GetModeCommands() const
+{
+	return FLudiscanPluginCommands::Get().GetCommands();
+}
+
+void UHeatMapEdMode::CalculateBoundingBox()
+{
+	if (HeatmapArray.Num() == 0)
+	{
+		return;
+	}
 	// 初期値は非常に大きな値
 	float minX = FLT_MAX, minY = FLT_MAX, minZ = FLT_MAX;
 	float maxX = FLT_MIN, maxY = FLT_MIN, maxZ = FLT_MIN;
@@ -69,25 +119,15 @@ void FHeatMapEdMode::CalculateBoundingBox()
 	BoundingBox.Min = FVector(minX - Space, minY - Space, minZ - Space);
 	BoundingBox.Max = FVector(maxX + Space, maxY + Space, maxZ + Space);
 }
-void FHeatMapEdMode::Enter()
-{
-	FEdMode::Enter();
-	// 必要に応じて初期化コードを追加
-}
 
-void FHeatMapEdMode::Exit()
+void UHeatMapEdMode::GenerateDrawPositions()
 {
-	// 必要に応じてクリーンアップコードを追加
+	if (HeatmapArray.Num() == 0)
+	{
+		return;
+	}
 	DrawPositions.Empty();
-	HeatmapArray.Empty();
-	
-	FEdMode::Exit();
-}
-
-void FHeatMapEdMode::GenerateDrawPositions()
-{
-	DrawPositions.Empty();
-	const float StepSize = 100.0f;
+	constexpr float StepSize = 100.0f;
 	const FVector BoxSize = BoundingBox.Max - BoundingBox.Min;
 	if (BoxSize.X <= 0.0f || BoxSize.Y <= 0.0f || BoxSize.Z <= 0.0f)
 	{
@@ -97,7 +137,7 @@ void FHeatMapEdMode::GenerateDrawPositions()
 	const int32 StepsY = FMath::CeilToInt(BoxSize.Y / StepSize);
 	const int32 StepsZ = FMath::CeilToInt(BoxSize.Z / StepSize);
 
-	const float MinDensityValue = 1.0f; // 最小密度値（対数スケール用に1以上を設定）
+	constexpr float MinDensityValue = 1.0f; // 最小密度値（対数スケール用に1以上を設定）
 	const float DensityScaleFactor = FMath::Loge(MaxDensityValue + 1.0f) - FMath::Loge(MinDensityValue);
 	if (DensityScaleFactor <= 0.0f)
 	{
@@ -111,7 +151,7 @@ void FHeatMapEdMode::GenerateDrawPositions()
 		{
 			for (int32 Z = 0; Z <= StepsZ; ++Z)
 			{
-				if (!bDrawZAxis && Z != 0)
+				if (!DrawZAxis && Z != 0)
 				{
 					continue;
 				}
@@ -122,7 +162,7 @@ void FHeatMapEdMode::GenerateDrawPositions()
 
 				for (const FHeatmapData& Data : HeatmapArray)
 				{
-					float Distance = FVector::Dist(Position, FVector(Data.X, Data.Y, bDrawZAxis ? Data.Z : 0.0f));
+					float Distance = FVector::Dist(Position, FVector(Data.X, Data.Y, DrawZAxis ? Data.Z : 0.0f));
 					if (Distance < MinDistance)
 					{
 						MinDistance = Distance;
@@ -142,3 +182,4 @@ void FHeatMapEdMode::GenerateDrawPositions()
 		}
 	}
 }
+#undef LOCTEXT_NAMESPACE

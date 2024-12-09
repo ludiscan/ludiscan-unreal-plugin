@@ -26,6 +26,8 @@ public class LudiscanPlugin : ModuleRules
 			new string[]
 			{
 				"Core", "HTTP", "Json", "JsonUtilities", "RHI", "RenderCore", "Slate", "SlateCore", "UnrealEd",
+				"InteractiveToolsFramework",
+				"EditorInteractiveToolsFramework",
 				// ... add other public dependencies that you statically link with here ...
 			}
 		);
@@ -44,6 +46,11 @@ public class LudiscanPlugin : ModuleRules
 				"Slate",
 				"SlateCore",
 				"Core", "HTTP", "Json", "JsonUtilities", "RHI", "RenderCore",
+				"CoreUObject",
+				"EditorStyle",
+				"LevelEditor",
+				"InteractiveToolsFramework",
+				"EditorInteractiveToolsFramework",
 				// ... add private dependencies that you statically link with here ...	
 			}
 		);

@@ -2,10 +2,8 @@
 
 #include "LudiscanPlugin.h"
 
-#include "EditorModeRegistry.h"
 #include "LudiscanPluginStyle.h"
 #include "LudiscanPluginCommands.h"
-#include "HeatMap/HeatMapEdMode.h"
 #include "Window/SLudiscanMainWidget.h"
 
 #define LOCTEXT_NAMESPACE "FLudiscanPluginModule"
@@ -35,13 +33,6 @@ void FLudiscanPluginModule::StartupModule()
 		.SetDisplayName(LOCTEXT("Analytics Editor", "分析Editor"))
 		.SetMenuType(ETabSpawnerMenuType::Hidden)
 		.SetIcon(FSlateIcon(FName("CustomWIndowPluginStyle"), FName("CustomWIndowPlugin.OpenPluginWindowIcon")));
-
-	FEditorModeRegistry::Get().RegisterMode<FHeatMapEdMode>(
-		FHeatMapEdMode::EM_HeatMapEdMode, // モードID
-		LOCTEXT("VisualizeHeatMapMode", "ヒートマップモード"),   // 表示名
-		FSlateIcon(FName("LudiscanPluginStyle"), FName("LudiscanPlugin.OpenPluginWindowIcon")),                             // アイコン（省略可能）
-		true                                      // 単一選択に設定
-	);
 }
 
 void FLudiscanPluginModule::ShutdownModule()
@@ -57,8 +48,6 @@ void FLudiscanPluginModule::ShutdownModule()
 	FLudiscanPluginCommands::Unregister();
 
 	FGlobalTabmanager::Get()->UnregisterNomadTabSpawner(LudiscanPluginTabName);
-
-	FEditorModeRegistry::Get().UnregisterMode(FHeatMapEdMode::EM_HeatMapEdMode);
 }
 
 void FLudiscanPluginModule::PluginButtonClicked()

@@ -13,12 +13,9 @@ public:
 	void Construct(const FArguments& Args)
 	{
 		ActivateHeatmap();
-		if (GLevelEditorModeToolsIsValid())
+		if (UEdMode* CustomGizmoMode = GLevelEditorModeTools().GetActiveScriptableMode(UHeatMapEdMode::EM_HeatMapEdMode))
 		{
-			if (FHeatMapEdMode* CustomGizmoMode = static_cast<FHeatMapEdMode*>(GLevelEditorModeTools().GetActiveMode(FHeatMapEdMode::EM_HeatMapEdMode)))
-			{
-				EdMode = MakeShareable(CustomGizmoMode);
-			}
+			EdMode = Cast<UHeatMapEdMode>(CustomGizmoMode);
 		}
 		ChildSlot
 		.Padding(5)
@@ -107,7 +104,7 @@ private:
 	FHeatMapTask SelectedTask = FHeatMapTask();
 	FString HostName;
 	LudiscanClient Client = LudiscanClient();
-	TSharedPtr<FHeatMapEdMode> EdMode;
+	TWeakObjectPtr<UHeatMapEdMode> EdMode;
 	FTimerHandle TaskPollingTimerHandle;
 	UWorld* World = GEditor->GetEditorWorldContext().World();
 
@@ -148,12 +145,9 @@ private:
 	                {
 	                    World->GetTimerManager().ClearTimer(TaskPollingTimerHandle);
 	                }
-					if (GLevelEditorModeToolsIsValid())
+					if (UEdMode* CustomGizmoMode = GLevelEditorModeTools().GetActiveScriptableMode(UHeatMapEdMode::EM_HeatMapEdMode))
 					{
-						if (FHeatMapEdMode* CustomGizmoMode = static_cast<FHeatMapEdMode*>(GLevelEditorModeTools().GetActiveMode(FHeatMapEdMode::EM_HeatMapEdMode)))
-						{
-							EdMode = MakeShareable(CustomGizmoMode);
-						}
+						EdMode = Cast<UHeatMapEdMode>(CustomGizmoMode);
 					}
 					if (EdMode.IsValid())
 					{
@@ -376,22 +370,19 @@ private:
 	static void ActivateHeatmap()
 	{
 		// Gizmoの表示モードが有効かどうかを確認
-		if (GLevelEditorModeToolsIsValid() && !GLevelEditorModeTools().IsModeActive(FHeatMapEdMode::EM_HeatMapEdMode))
+		if (GLevelEditorModeToolsIsValid() && !GLevelEditorModeTools().IsModeActive(UHeatMapEdMode::EM_HeatMapEdMode))
 		{
 			// モードが無効な場合は有効にする
-			GLevelEditorModeTools().ActivateMode(FHeatMapEdMode::EM_HeatMapEdMode);
+			GLevelEditorModeTools().ActivateMode(UHeatMapEdMode::EM_HeatMapEdMode);
 			UE_LOG(LogTemp, Warning, TEXT("Custom Gizmo Mode Activated"));
-			// モードが有効な場合は無効にする
-			// GLevelEditorModeTools().DeactivateMode(FHeatMapEdMode::EM_HeatMapEdMode);
-			// UE_LOG(LogTemp, Warning, TEXT("Custom Gizmo Mode Deactivated"));
 		}
 	}
 
 	void DeactivateHeatMap()
 	{
-		if (EdMode.Get() != nullptr && GLevelEditorModeToolsIsValid() && GLevelEditorModeTools().GetActiveMode(FHeatMapEdMode::EM_HeatMapEdMode))
+		if (GLevelEditorModeToolsIsValid() && GLevelEditorModeTools().IsModeActive(UHeatMapEdMode::EM_HeatMapEdMode))
 		{
-			GLevelEditorModeTools().DeactivateMode(FHeatMapEdMode::EM_HeatMapEdMode);
+			GLevelEditorModeTools().DeactivateMode(UHeatMapEdMode::EM_HeatMapEdMode);
 			UE_LOG(LogTemp, Warning, TEXT("Custom Gizmo Mode Deactivated"));
 		}
 	}

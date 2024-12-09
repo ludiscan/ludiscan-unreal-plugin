@@ -20,6 +20,11 @@ public:
 	// TCommands<> interface
 	virtual void RegisterCommands() override;
 
-public:
+	static TMap<FName, TArray<TSharedPtr<FUICommandInfo>>> GetCommands();
+
+	TSharedPtr<FUICommandInfo> InteractiveTool;
+
 	TSharedPtr< FUICommandInfo > OpenPluginWindow;
+protected:
+	TMap<FName, TArray<TSharedPtr<FUICommandInfo>>> Commands;
 };
