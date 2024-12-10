@@ -1,6 +1,7 @@
 #pragma once
 #include "EditorModeManager.h"
 #include "Client/LudiscanClient.h"
+#include "Component/SSessionDetail.h"
 #include "HeatMap/HeatMapEdMode.h"
 #include "Widgets/Input/SSlider.h"
 
@@ -12,6 +13,11 @@ public:
 
 	void Construct(const FArguments& Args)
 	{
+		IsLoading = true;
+		if (SSessionDetailRef.IsValid())
+		{
+			SSessionDetailRef->SetIsLoading(true);
+		} 
 		ActivateHeatmap();
 		if (UEdMode* CustomGizmoMode = GLevelEditorModeTools().GetActiveScriptableMode(UHeatMapEdMode::EM_HeatMapEdMode))
 		{
@@ -29,7 +35,7 @@ public:
 				SNew(SScrollBox)
 		        + SScrollBox::Slot()
 		        [
-		        	SessionInfoRow()
+		        	SAssignNew(SSessionDetailRef, SSessionDetail)
 		        ]
 	        ]
 			// 色強調度のスライダー
@@ -75,7 +81,10 @@ public:
 			]
 		];
 	}
-	
+
+	SHeatMapWidget()
+	{
+	}
 	
 	void Reload(const FString& Name, const FHeatMapTask& NewTask)
 	{
@@ -102,6 +111,7 @@ public:
 	}
 private:
 	FHeatMapTask SelectedTask = FHeatMapTask();
+	TSharedPtr<SSessionDetail> SSessionDetailRef;
 	FString HostName;
 	LudiscanClient Client = LudiscanClient();
 	TWeakObjectPtr<UHeatMapEdMode> EdMode;
@@ -110,7 +120,7 @@ private:
 
 	TSharedPtr<SVerticalBox> VerticalBox;
 
-	bool IsLoading = false;
+	bool IsLoading;
 
 	// ポーリング間隔（秒単位）
 	const float TaskPollingInterval = 1.5f;
@@ -118,6 +128,14 @@ private:
 	void SetTask(const FHeatMapTask& NewTask)
 	{
 		SelectedTask = NewTask;
+		if (SSessionDetailRef.IsValid())
+		{
+			SSessionDetailRef->SetSession(SelectedTask.Session);
+		}
+		if (SSessionDetailRef.IsValid())
+		{
+			SSessionDetailRef->SetIsLoading(true);
+		}
 		if (World)
 		{
 			World->GetTimerManager().ClearTimer(TaskPollingTimerHandle);
@@ -139,14 +157,27 @@ private:
 	void PollGetTask()
 	{
 		IsLoading = true;
+		if (SSessionDetailRef.IsValid())
+		{
+			SSessionDetailRef->SetIsLoading(true);
+		}
 		Client.GetTask(
 			SelectedTask,
 			[this](const FHeatMapTask& Task) {
 				SelectedTask = Task;
 				SelectedTask.Log();
+				if (SSessionDetailRef.IsValid())
+				{
+					SSessionDetailRef->SetSession(SelectedTask.Session);
+				}
 				if (SelectedTask.Status == FHeatMapTask::Completed)
 				{
 					IsLoading = false;
+					if (SSessionDetailRef.IsValid())
+					{
+						SSessionDetailRef->SetIsLoading(false);
+					}
+					
 					// タイマーを停止
 					if (World)
 	                {
@@ -165,6 +196,10 @@ private:
 				} else if (SelectedTask.Status == FHeatMapTask::Failed)
 				{
 					IsLoading = false;
+					if (SSessionDetailRef.IsValid())
+					{
+						SSessionDetailRef->SetIsLoading(false);
+					}
 					if (World)
 					{
 						World->GetTimerManager().ClearTimer(TaskPollingTimerHandle);
@@ -175,6 +210,10 @@ private:
 				} else
 				{
 					IsLoading = true;
+					if (SSessionDetailRef.IsValid())
+					{
+						SSessionDetailRef->SetIsLoading(true);
+					}
 					// タスクがまだ進行中の場合、次のポーリングをスケジュール
 					if (World)
 					{
@@ -189,6 +228,10 @@ private:
 				Invalidate(EInvalidateWidgetReason::Paint);
 			},
 			[this](const FString& Message) {
+				if (SSessionDetailRef.IsValid())
+				{
+					SSessionDetailRef->SetIsLoading(false);
+				}
 				// タイマーを停止
 				if (World)
 				{
@@ -200,168 +243,6 @@ private:
 			}
 		);
 		Invalidate(EInvalidateWidgetReason::Paint);
-	}
-	
-	TSharedRef<SBorder> SessionInfoRow()
-	{
-		if (IsLoading)
-		{
-			return SNew(SBorder)
-				.BorderBackgroundColor(FLinearColor(0.2f, 0.2f, 0.2f, 1.0f)) // 背景色
-				.Padding(FMargin(5.0f))
-				[
-					SNew(STextBlock)
-					.Text(FText::FromString("Loading..."))
-					.TextStyle(FAppStyle::Get(), "NormalText")
-				];
-		}
-		FPlaySession Session = SelectedTask.Session;
-		return SNew(SBorder)
-        .BorderBackgroundColor(FLinearColor(0.2f, 0.2f, 0.2f, 1.0f)) // 背景色
-        .Padding(FMargin(5.0f))
-        [
-            SNew(SVerticalBox)
-            // セッション ID
-            + SVerticalBox::Slot()
-            .AutoHeight()
-            .Padding(2.0f)
-            [
-                SNew(STextBlock)
-                .Text_Lambda([this, Session]() -> FText {
-                    return FText::FromString(Session.SessionId > 0
-                        ? FString::Printf(TEXT("Session ID: %d"), Session.SessionId)
-                        : FString(TEXT("No session selected")));
-                })
-                .TextStyle(FAppStyle::Get(), "NormalText")
-            ]
-            // プロジェクト ID
-            + SVerticalBox::Slot()
-            .AutoHeight()
-            .Padding(2.0f)
-            [
-                SNew(STextBlock)
-                .Text_Lambda([this, Session]() -> FText {
-                    return FText::FromString(FString::Printf(TEXT("Project ID: %d"), Session.ProjectId));
-                })
-                .TextStyle(FAppStyle::Get(), "NormalText")
-            ]
-            // セッション名
-            + SVerticalBox::Slot()
-            .AutoHeight()
-            .Padding(2.0f)
-            [
-                SNew(STextBlock)
-                .Text_Lambda([this, Session]() -> FText {
-                    return FText::FromString(!Session.Name.IsEmpty()
-                        ? FString::Printf(TEXT("Name: %s"), *Session.Name)
-                        : FString(TEXT("Name: Unknown")));
-                })
-                .TextStyle(FAppStyle::Get(), "NormalText")
-            ]
-            // デバイス ID
-            + SVerticalBox::Slot()
-            .AutoHeight()
-            .Padding(2.0f)
-            [
-                SNew(STextBlock)
-                .Text_Lambda([this, Session]() -> FText {
-                    return FText::FromString(!Session.DeviceId.IsEmpty()
-                        ? FString::Printf(TEXT("Device ID: %s"), *Session.DeviceId)
-                        : FString(TEXT("Device ID: Unknown")));
-                })
-                .TextStyle(FAppStyle::Get(), "NormalText")
-            ]
-            // プラットフォーム
-            + SVerticalBox::Slot()
-            .AutoHeight()
-            .Padding(2.0f)
-            [
-                SNew(STextBlock)
-                .Text_Lambda([this, Session]() -> FText {
-                    return FText::FromString(!Session.Platform.IsEmpty()
-                        ? FString::Printf(TEXT("Platform: %s"), *Session.Platform)
-                        : FString(TEXT("Platform: Unknown")));
-                })
-                .TextStyle(FAppStyle::Get(), "NormalText")
-            ]
-            // アプリバージョン
-            + SVerticalBox::Slot()
-            .AutoHeight()
-            .Padding(2.0f)
-            [
-                SNew(STextBlock)
-                .Text_Lambda([this, Session]() -> FText {
-                    return FText::FromString(!Session.AppVersion.IsEmpty()
-                        ? FString::Printf(TEXT("App Version: %s"), *Session.AppVersion)
-                        : FString(TEXT("App Version: Unknown")));
-                })
-                .TextStyle(FAppStyle::Get(), "NormalText")
-            ]
-            // 開始時刻
-            + SVerticalBox::Slot()
-            .AutoHeight()
-            .Padding(2.0f)
-            [
-                SNew(STextBlock)
-                .Text_Lambda([this, Session]() -> FText {
-                    return FText::FromString(!Session.StartTime.IsEmpty()
-                        ? FString::Printf(TEXT("Start Time: %s"), *Session.StartTime)
-                        : FString(TEXT("Start Time: Unknown")));
-                })
-                .TextStyle(FAppStyle::Get(), "NormalText")
-            ]
-            // 終了時刻
-            + SVerticalBox::Slot()
-            .AutoHeight()
-            .Padding(2.0f)
-            [
-                SNew(STextBlock)
-                .Text_Lambda([this, Session]() -> FText {
-                    return FText::FromString(!Session.EndTime.IsEmpty()
-                        ? FString::Printf(TEXT("End Time: %s"), *Session.EndTime)
-                        : FString(TEXT("End Time: Unknown")));
-                })
-                .TextStyle(FAppStyle::Get(), "NormalText")
-            ]
-	        + SVerticalBox::Slot()
-	        .AutoHeight()
-	        .Padding(2.0f)
-	        [
-	        	SNew(SVerticalBox)
-				+ SVerticalBox::Slot()
-				.AutoHeight()
-				[
-					SNew(STextBlock)
-					.Text(FText::FromString("MetaData:"))
-					.TextStyle(FAppStyle::Get(), "NormalText")
-				]
-				// MetaData の各キーと値を表示
-				+ SVerticalBox::Slot()
-				.AutoHeight()
-				[
-					SNew(SVerticalBox)
-					.Clipping(EWidgetClipping::ClipToBounds)
-					+ SVerticalBox::Slot()
-					.AutoHeight()
-					.Padding(2.0f)
-					.HAlign(HAlign_Left)
-					[
-						SNew(STextBlock)
-						.Text_Lambda([this, Session]() -> FText {
-							FString MetaDataString;
-							for (const auto& Pair : Session.MetaData)
-							{
-								MetaDataString += FString::Printf(TEXT("%s: %s\n"), *Pair.Key, *Pair.Value);
-							}
-							return FText::FromString(MetaDataString.IsEmpty()
-								? FString(TEXT("No metadata available"))
-								: MetaDataString);
-						})
-						.TextStyle(FAppStyle::Get(), "NormalText")
-					]
-				]
-	        ]
-        ];
 	}
 	
 	FText GetColorScaleFactorText() const
