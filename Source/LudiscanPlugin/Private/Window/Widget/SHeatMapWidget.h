@@ -150,6 +150,19 @@ public:
 							.OnTextCommitted(this, &SHeatMapWidget::OnDrawZOffsetCommitted)
 						]
 					]
+
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(5)
+					[
+						SNew(SCheckBox)
+						.IsChecked(this, &SHeatMapWidget::GetDrawMinDensityCheckState)
+						.OnCheckStateChanged(this, &SHeatMapWidget::OnDrawMinDensityCheckStateChanged)
+						[
+							SNew(STextBlock)
+							.Text(FText::FromString("Draw Min Density"))
+						]
+					]
 				]
 			]
 		];
@@ -162,6 +175,10 @@ public:
 	void Reload(const FString& Name, const FHeatMapTask& NewTask)
 	{
 		HostName = Name;
+		if (UEdMode* CustomGizmoMode = GLevelEditorModeTools().GetActiveScriptableMode(UHeatMapEdMode::EM_HeatMapEdMode))
+		{
+			EdMode = Cast<UHeatMapEdMode>(CustomGizmoMode);
+		}
 		SetTask(NewTask);
 	}
 
@@ -405,6 +422,17 @@ private:
 	void OnDrawZOffsetCommitted(const FText& Text, ETextCommit::Type Arg)
 	{
 		EdMode->SetDrawZOffset(FCString::Atoi(*Text.ToString()));
+		EdMode->RefreshDrawPositions();
+	}
+
+	ECheckBoxState GetDrawMinDensityCheckState() const
+	{
+		return EdMode->IsDrawMinDensity() ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+	}
+
+	void OnDrawMinDensityCheckStateChanged(ECheckBoxState NewState) const
+	{
+		EdMode->SetDrawMinDensity(NewState == ECheckBoxState::Checked);
 		EdMode->RefreshDrawPositions();
 	}
 };

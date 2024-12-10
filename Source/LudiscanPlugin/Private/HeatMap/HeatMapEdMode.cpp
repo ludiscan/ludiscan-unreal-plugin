@@ -104,6 +104,7 @@ void UHeatMapEdMode::CalculateBoundingBox()
 	float minX = FLT_MAX, minY = FLT_MAX, minZ = FLT_MAX;
 	float maxX = FLT_MIN, maxY = FLT_MIN, maxZ = FLT_MIN;
 	MaxDensityValue = 0.0f;
+	MinDensityValue = FLT_MAX;
 	TotalDensity = 0.0f;
 	float Space = 100.0f;
 
@@ -118,6 +119,8 @@ void UHeatMapEdMode::CalculateBoundingBox()
 		maxY = FMath::Max(maxY, Data.Y);
 		maxZ = FMath::Max(maxZ, Data.Z);
 		MaxDensityValue = FMath::Max(MaxDensityValue, Data.Density);
+		MinDensityValue = FMath::Min(MinDensityValue, Data.Density);
+		
 		TotalDensity += Data.Density;
 	}
 
@@ -143,7 +146,6 @@ void UHeatMapEdMode::GenerateDrawPositions()
 	const int32 StepsY = FMath::CeilToInt(BoxSize.Y / StepSize);
 	const int32 StepsZ = FMath::CeilToInt(BoxSize.Z / StepSize);
 
-	constexpr float MinDensityValue = 1.0f; // 最小密度値（対数スケール用に1以上を設定）
 	const float DensityScaleFactor = FMath::Loge(MaxDensityValue + 1.0f) - FMath::Loge(MinDensityValue);
 	if (DensityScaleFactor <= 0.0f)
 	{
@@ -174,6 +176,11 @@ void UHeatMapEdMode::GenerateDrawPositions()
 						MinDistance = Distance;
 						ClosestDensity = Data.Density;
 					}
+				}
+
+				if (!DrawMinDensity && ClosestDensity <= MinDensityValue)
+				{
+					continue;
 				}
 
 				// 対数スケールと色強調度で色を計算
