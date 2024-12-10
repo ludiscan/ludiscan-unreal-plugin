@@ -45,6 +45,12 @@ void UHeatMapEdMode::Enter()
 	// 必要に応じて初期化コードを追加
 	// ツールの登録
 	RegisterTools();
+	float SavedColorScaleFilter = LudiscanClient::GetSaveHeatmapColorScaleFilter(1.0f);
+	ColorScaleFactor = SavedColorScaleFilter;
+	bool SavedDrawZAxis = LudiscanClient::GetSaveHeatmapDrawZAxis(false);
+	DrawZAxis = SavedDrawZAxis;
+	int SavedStepSize = LudiscanClient::GetSaveHeatmapDrawStepSize(100);
+	DrawStepSize = SavedStepSize;
 }
 
 void UHeatMapEdMode::Exit()
@@ -65,7 +71,7 @@ void UHeatMapEdMode::Render(const FSceneView* View, FViewport* Viewport, FPrimit
 	// 描画位置と色をもとに点を描画
 	for (TPair<FVector, FColor>& Data : DrawPositions)
 	{
-		if (!View->ViewFrustum.IntersectBox(Data.Key, FVector(20.0f, 20.0f, 20.0f)) || Data.Value.A == 0)  // ビューフラスタムとの交差判定
+		if (!View->ViewFrustum.IntersectBox(Data.Key, FVector(20.0f, 20.0f, 20.0f)))  // ビューフラスタムとの交差判定
 		{
 			continue;
 		}
@@ -127,7 +133,7 @@ void UHeatMapEdMode::GenerateDrawPositions()
 		return;
 	}
 	DrawPositions.Empty();
-	constexpr float StepSize = 100.0f;
+	const float StepSize = DrawStepSize;
 	const FVector BoxSize = BoundingBox.Max - BoundingBox.Min;
 	if (BoxSize.X <= 0.0f || BoxSize.Y <= 0.0f || BoxSize.Z <= 0.0f)
 	{
@@ -175,6 +181,12 @@ void UHeatMapEdMode::GenerateDrawPositions()
 				NormalizedDensity = FMath::Clamp(NormalizedDensity * ColorScaleFactor, 0.0f, 1.0f); // 強調度を適用し、範囲を0～1に制限
 				FColor Color = FColor::MakeRedToGreenColorFromScalar(NormalizedDensity);
 				Color.A = FMath::Clamp(static_cast<int32>(NormalizedDensity * 255), 0, 255);
+				if (Color.A < 20)
+				{
+					Color.A = 0;
+				}
+
+				Position.Z += DrawZOffset;
 
 				// 描画データに追加
 				DrawPositions.Add({Position, Color});

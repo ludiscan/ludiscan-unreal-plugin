@@ -23,6 +23,7 @@ public:
     const static FString SaveHeatmapColorScaleFilterKey;
     const static FString SaveHeatmapDrawZAxisKey;
 	const static FString SaveProjectIdKey;
+	const static FString SaveHeatmapDrawStepSizeKey;
     LudiscanClient();
     ~LudiscanClient();
 
@@ -44,6 +45,10 @@ public:
 
 	static int GetSaveProjectId(const int DefaultProjectId);
 
+	static void SetSaveHeatmapDrawStepSize(const int NewStepSize);
+
+	static int GetSaveHeatmapDrawStepSize(const int DefaultStepSize);
+
     void CreatePositionsPost(
         int projectId,
         int sessionId,
@@ -60,13 +65,21 @@ public:
     );
 
     void CreateSessionHeatMap(
-        int projectId,
-        int sessionId,
+        int ProjectId,
+        int SessionId,
         TFunction<void(FHeatMapTask)> OnSuccess,
         TFunction<void(FString)> OnFailure = [](FString Message) {},
-        int stepSize = 300,
-        bool zVisualize = false
+        int StepSize = 300,
+        bool ZVisualize = false
     ) const;
+
+	void CreateProjectHeatMap(
+		int ProjectId,
+		TFunction<void(FHeatMapTask)> OnSuccess,
+		TFunction<void(FString)> OnFailure = [](FString Message) {},
+		int StepSize = 300,
+		bool ZVisualize = false
+	) const;
 
 	void GetTask(
 		const FHeatMapTask& Task,
@@ -110,6 +123,7 @@ inline const FString LudiscanClient::SaveApiHostNameKey = TEXT("LudiscanApiHostN
 inline const FString LudiscanClient::SaveHeatmapColorScaleFilterKey = TEXT("LudiscanHeatmapColorScaleFiler");
 inline const FString LudiscanClient::SaveHeatmapDrawZAxisKey = TEXT("LudiscanHeatmapDrawZAxis");
 inline const FString LudiscanClient::SaveProjectIdKey = TEXT("LudiscanProjectId");
+inline const FString LudiscanClient::SaveHeatmapDrawStepSizeKey = TEXT("LudiscanHeatmapDrawStepSize");
 
 inline LudiscanClient::LudiscanClient()
 {
@@ -167,6 +181,16 @@ inline int LudiscanClient::GetSaveProjectId(const int DefaultProjectId)
 	return FSettingsManager::GetInt(SaveProjectIdKey, DefaultProjectId);
 }
 
+inline void LudiscanClient::SetSaveHeatmapDrawStepSize(const int NewStepSize)
+{
+	FSettingsManager::SetInt(SaveHeatmapDrawStepSizeKey, NewStepSize);
+}
+
+inline int LudiscanClient::GetSaveHeatmapDrawStepSize(const int DefaultStepSize)
+{
+	return FSettingsManager::GetInt(SaveHeatmapDrawStepSizeKey, DefaultStepSize);
+}
+
 inline void LudiscanClient::CreatePositionsPost(int projectId, int sessionId, int players, int stampCount,
 	const TArray<TArray<FPlayerPosition>>& allPositions, TFunction<void()> OnSuccess)
 {
@@ -214,20 +238,20 @@ inline void LudiscanClient::FinishedSession(int projectId, int sessionId, TFunct
 }
 
 inline void LudiscanClient::CreateSessionHeatMap(
-	int projectId,
-	int sessionId,
+	int ProjectId,
+	int SessionId,
 	TFunction<void(FHeatMapTask)> OnSuccess,
 	TFunction<void(FString)> OnFailure,
-	int stepSize,
-	bool zVisualize) const
+	int StepSize,
+	bool ZVisualize) const
 {
 	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
-	const FString Url = bApiHostName + FString::Printf(TEXT("/api/v0/heatmap/projects/%d/play_session/%d/tasks"), projectId, sessionId);
+	const FString Url = bApiHostName + FString::Printf(TEXT("/api/v0/heatmap/projects/%d/play_session/%d/tasks"), ProjectId, SessionId);
 	Request->SetURL(Url);
 	Request->SetVerb("POST");
 	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject());
-	JsonObject->SetNumberField("stepSize", stepSize);
-	JsonObject->SetBoolField("zVisible", zVisualize);
+	JsonObject->SetNumberField("stepSize", StepSize);
+	JsonObject->SetBoolField("zVisible", ZVisualize);
 	FString RequestBody;
 	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&RequestBody);
 	FJsonSerializer::Serialize(JsonObject.ToSharedRef(), Writer);
@@ -259,6 +283,53 @@ inline void LudiscanClient::CreateSessionHeatMap(
 
 	Request->ProcessRequest();
 }
+
+inline void LudiscanClient::CreateProjectHeatMap(
+	int ProjectId,
+	TFunction<void(FHeatMapTask)> OnSuccess,
+	TFunction<void(FString)> OnFailure,
+	int StepSize,
+	bool ZVisualize) const
+{
+	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
+	const FString Url = bApiHostName + FString::Printf(TEXT("/api/v0/heatmap/projects/%d/tasks"), ProjectId);
+	Request->SetURL(Url);
+	Request->SetVerb("POST");
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject());
+	JsonObject->SetNumberField("stepSize", StepSize);
+	JsonObject->SetBoolField("zVisible", ZVisualize);
+	FString RequestBody;
+	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&RequestBody);
+	FJsonSerializer::Serialize(JsonObject.ToSharedRef(), Writer);
+	Request->SetContentAsString(RequestBody);
+	Request->SetHeader("Content-Type", "application/json");
+	// 完了時のログ出力
+	Request->OnProcessRequestComplete().BindLambda([OnSuccess, OnFailure](FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful) {
+		if (bWasSuccessful && Response.IsValid())
+		{
+			// レスポンスを文字列として取得
+			FString ResponseContent = Response->GetContentAsString();
+
+			// レスポンスのJSONを解析
+			FHeatMapTask Task;
+                
+			if (FHeatMapTask::ParseDataFromJson(ResponseContent, Task))
+			{
+				OnSuccess(Task);
+				return;
+			}
+			UE_LOG(LogTemp, Error, TEXT("Failed to deserialize the JSON response."));
+			OnFailure("Failed to deserialize the JSON response.");
+			return;
+		}
+		UE_LOG(LogTemp, Error, TEXT("Request failed"));
+		return OnFailure("Request failed");
+	});
+
+
+	Request->ProcessRequest();
+}
+
 
 inline void LudiscanClient::GetTask(
 	const FHeatMapTask& Task,

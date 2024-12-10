@@ -59,6 +59,27 @@ public:
 		LudiscanClient::SetSaveHeatmapDrawZAxis(bNewValue);
 	}
 
+	int GetDrawStepSize() const
+	{
+		return DrawStepSize;
+	}
+
+	void SetDrawStepSize(int NewValue)
+	{
+		DrawStepSize = NewValue;
+		LudiscanClient::SetSaveHeatmapDrawStepSize(NewValue);
+	}
+
+	int GetDrawZOffset() const
+	{
+		return DrawZOffset;
+	}
+
+	void SetDrawZOffset(int NewValue)
+	{
+		DrawZOffset = NewValue;
+	}
+
 	virtual bool UsesToolkits() const override;
 
 	virtual void CreateToolkit() override;
@@ -69,6 +90,12 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = Options)
 	bool DrawZAxis = false;
+
+	UPROPERTY(EditAnywhere, Category = Options)
+	int DrawStepSize = 100;
+
+	UPROPERTY(EditAnywhere, Category = Options)
+	int DrawZOffset = 0;
 
 	UPROPERTY(EditAnywhere, Category = Options)
 	FBox BoundingBox;

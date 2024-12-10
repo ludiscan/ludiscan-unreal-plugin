@@ -54,6 +54,12 @@ public:
 					]
 				]
 			]
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			[
+				CreateRequestEditor()
+			]
 		];
 		Hostname = LudiscanClient::GetSaveApiHostName("https://yuhi.tokyo");
 	}
@@ -74,24 +80,6 @@ public:
 	        // HeatmapWidget.Reset();
 	        UE_LOG(LogTemp, Warning, TEXT("HeatmapWidget reset and unloaded"));
 	    }
-
-	    // if (ProjectWidget.IsValid())
-	    // {
-	    //     ProjectWidget.Reset();
-	    //     UE_LOG(LogTemp, Warning, TEXT("ProjectWidget reset"));
-	    // }
-	    //
-	    // if (SessionWidget.IsValid())
-	    // {
-	    //     SessionWidget.Reset();
-	    //     UE_LOG(LogTemp, Warning, TEXT("SessionWidget reset"));
-	    // }
-	    //
-	    // if (WidgetSwitcher.IsValid())
-	    // {
-	    //     WidgetSwitcher.Reset();
-	    //     UE_LOG(LogTemp, Warning, TEXT("WidgetSwitcher reset"));
-	    // }
 	}
 
 private:
@@ -102,8 +90,12 @@ private:
 
 	TSharedPtr<SEditableTextBox> HostnameInputBox;
 	FString Hostname = "";
+	int StepSize = 200;
+	bool ZVisible = true;
 	FProject SelectedProject = FProject();
 	FHeatMapTask SelectedTask = FHeatMapTask();
+	TFunction<void()> LastHeatMapTaskPolling = []() {};
+	
 	LudiscanClient Client = LudiscanClient();
 
 	void OnProjectSelected(TSharedPtr<FProject> Project)
@@ -124,12 +116,27 @@ private:
 	void OnSessionSelected(TSharedPtr<FPlaySession> InSession)
 	{
 		UE_LOG(LogTemp, Log, TEXT("Selected Session: %d"), InSession->SessionId);
-		CreateTaskAndActivateHeatmap(*InSession);
+
+		LastHeatMapTaskPolling = [this, InSession]()
+		{
+			CreateSessionTaskAndActivateHeatmap(
+			*InSession,
+			StepSize,
+			ZVisible);
+		};
+		LastHeatMapTaskPolling();
 	}
 
 	void OnAllSessionSelected()
 	{
-		
+		LastHeatMapTaskPolling = [this]()
+		{
+			CreateProjectTaskAndActivateHeatmap(
+			SelectedProject,
+			StepSize,
+			ZVisible);
+		};
+		LastHeatMapTaskPolling();
 	}
 
 	FText GetHostName() const
@@ -180,7 +187,7 @@ private:
 				if (SelectedTask.TaskId != FHeatMapTask().TaskId)
                 {
                     HeatmapWidget->Unload();
-                    HeatmapWidget->Reload(Hostname, SelectedTask);
+                    LastHeatMapTaskPolling();
                 }
 			}
 		}
@@ -207,6 +214,87 @@ private:
 				.OnClicked(this, &SLudiscanMainWidget::OnReloadButtonClicked)
 			];
 	}
+
+	void OnStepSizeCommitted(const FText& Text, ETextCommit::Type Arg)
+	{
+		StepSize = FCString::Atoi(*Text.ToString());
+	}
+
+	void OnStepSizeChanged(const FText& Text)
+	{
+		StepSize = FCString::Atoi(*Text.ToString());
+	}
+
+	void OnZAxisCheckStateChanged(ECheckBoxState CheckBoxState)
+	{
+		ZVisible = CheckBoxState == ECheckBoxState::Checked;
+	}
+
+	float GetStepSize() const
+	{
+		return StepSize;
+	}
+
+	void OnDrawStepSizeChanged(float X)
+	{
+		StepSize = FMath::RoundToInt(X);
+	}
+
+	FText GetDrawStepSizeText() const
+	{
+		return FText::AsNumber(StepSize);
+	}
+	// enter StepSize (100~1000) & zVisible (true/false)
+	TSharedRef<SWidget> CreateRequestEditor()
+	{
+		return SNew(SExpandableArea)
+			.AreaTitle(FText::FromString("Request Editor"))
+			.BodyContent()
+			[
+				SNew(SVerticalBox)
+				+ SVerticalBox::Slot()
+				.AutoHeight()
+				.Padding(5)
+				[
+					SNew(STextBlock)
+					.Text(FText::FromString("DrawStepSize"))
+				]
+				+ SVerticalBox::Slot()
+				.AutoHeight()
+				.Padding(5)
+				[
+					SNew(SHorizontalBox)
+					+ SHorizontalBox::Slot()
+					.FillWidth(0.8f)
+					[
+						SNew(SSlider)
+						.MinValue(50)
+						.MaxValue(1000)
+						.Value(this, &SLudiscanMainWidget::GetStepSize)
+						.OnValueChanged(this, &SLudiscanMainWidget::OnDrawStepSizeChanged)
+					]
+					+ SHorizontalBox::Slot()
+					.FillWidth(0.2f)
+					[
+						SNew(STextBlock)
+						.Text(this, &SLudiscanMainWidget::GetDrawStepSizeText)
+					]
+				]
+				+ SVerticalBox::Slot()
+				.AutoHeight()
+				.Padding(5)
+				[
+					SNew(SCheckBox)
+					.IsChecked(ZVisible)
+					.OnCheckStateChanged(this, &SLudiscanMainWidget::OnZAxisCheckStateChanged)
+					[
+						SNew(STextBlock)
+						.Text(FText::FromString("Draw Z-Axis"))
+					]
+				]
+			];
+	}
+	
 
 	TSharedRef<SWidget> CreateSelectButtonsSlot()
 	{
@@ -259,9 +347,9 @@ private:
 		return FReply::Handled();
 	}
 
-	void CreateTaskAndActivateHeatmap(
+	void CreateSessionTaskAndActivateHeatmap(
 		const FPlaySession& InSession = FPlaySession(),
-		int InStepSize = 300,
+		int InStepSize = 100,
 		bool InZVisible = false
 		)
     {
@@ -274,7 +362,7 @@ private:
 				InSession.ProjectId,
 				InSession.SessionId,
 				[this](FHeatMapTask Task) {
-					UE_LOG(LogTemp, Log, TEXT("Created heatmap task: %d"), Task.TaskId);
+					UE_LOG(LogTemp, Log, TEXT("Created session heatmap task: %d"), Task.TaskId);
 					Task.Log();
 					SelectedTask = Task;
 					if (WidgetSwitcher.IsValid())
@@ -297,4 +385,39 @@ private:
 		}
         
     }
+
+	void CreateProjectTaskAndActivateHeatmap(
+		const FProject& InProject = FProject(),
+		int InStepSize = 100,
+		bool InZVisible = false
+		)
+	{
+		if (InProject.Id == FProject().Id)
+		{
+			return;
+		}
+		Client.CreateProjectHeatMap(
+			InProject.Id,
+			[this](FHeatMapTask Task) {
+				UE_LOG(LogTemp, Log, TEXT("Created project heatmap task: %d"), Task.TaskId);
+				Task.Log();
+				SelectedTask = Task;
+				if (WidgetSwitcher.IsValid())
+				{
+					WidgetSwitcher->SetActiveWidget(HeatmapWidget.ToSharedRef());
+					if (HeatmapWidget.IsValid())
+					{
+						HeatmapWidget->Reload(Hostname, Task);
+					}
+				}
+			},
+			[this](const FString& Message) {
+				UE_LOG(LogTemp, Error, TEXT("Failed to create heatmap tasks: %s"), *Message);
+				FText DialogText = FText::FromString(Message);
+				FMessageDialog::Open(EAppMsgType::Ok, DialogText);
+			},
+			InStepSize,
+			InZVisible
+		);
+	}
 };

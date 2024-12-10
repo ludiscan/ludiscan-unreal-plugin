@@ -1,7 +1,7 @@
 #pragma once
 #include "EditorModeManager.h"
 #include "Client/LudiscanClient.h"
-#include "Component/SSessionDetail.h"
+#include "Component/SHeatMapDetail.h"
 #include "HeatMap/HeatMapEdMode.h"
 #include "Widgets/Input/SSlider.h"
 
@@ -14,9 +14,9 @@ public:
 	void Construct(const FArguments& Args)
 	{
 		IsLoading = true;
-		if (SSessionDetailRef.IsValid())
+		if (SHeatMapDetailRef.IsValid())
 		{
-			SSessionDetailRef->SetIsLoading(true);
+			SHeatMapDetailRef->SetIsLoading(true);
 		} 
 		ActivateHeatmap();
 		if (UEdMode* CustomGizmoMode = GLevelEditorModeTools().GetActiveScriptableMode(UHeatMapEdMode::EM_HeatMapEdMode))
@@ -26,66 +26,137 @@ public:
 		ChildSlot
 		.Padding(5)
 		[
-			SAssignNew(VerticalBox, SVerticalBox)
-			// 現在のセッション情報を表示
-	        + SVerticalBox::Slot()
-	        .FillHeight(1.0f)
-	        .Padding(5)
-	        [
+			SNew(SVerticalBox)
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			[
 				SNew(SScrollBox)
-		        + SScrollBox::Slot()
-		        [
-		        	SAssignNew(SSessionDetailRef, SSessionDetail)
-		        ]
-	        ]
-			// 色強調度のスライダー
-			+ SVerticalBox::Slot()
-			.AutoHeight()
-			.Padding(5)
-			[
-				SNew(STextBlock)
-				.Text(FText::FromString("Color Scale Factor"))
-			]
-			+ SVerticalBox::Slot()
-			.AutoHeight()
-			.Padding(5)
-			[
-				SNew(SHorizontalBox)
-				+ SHorizontalBox::Slot()
-				.FillWidth(0.8f)
+				.Orientation(Orient_Vertical)
+				.AllowOverscroll(EAllowOverscroll::Yes)
+				+ SScrollBox::Slot()
 				[
-					SNew(SSlider)
-					.Value(this, &SHeatMapWidget::GetColorScaleFactor)
-					.OnValueChanged(this, &SHeatMapWidget::OnColorScaleFactorChanged)
-				]
-				+ SHorizontalBox::Slot()
-				.FillWidth(0.2f)
-				[
-					SNew(STextBlock)
-					.Text(this, &SHeatMapWidget::GetColorScaleFactorText)
-				]
-			]
+					SAssignNew(VerticalBox, SVerticalBox)
+					// 現在のセッション情報を表示
+					+ SVerticalBox::Slot()
+					.FillHeight(1.0f)
+					.Padding(5)
+					[
+						SNew(SScrollBox)
+						+ SScrollBox::Slot()
+						[
+							SAssignNew(SHeatMapDetailRef, SHeatMapDetail)
+						]
+					]
+					// 色強調度のスライダー
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(5)
+					[
+						SNew(STextBlock)
+						.Text(FText::FromString("Color Scale Factor"))
+					]
 
-			// Z軸表示のチェックボックス
-			+ SVerticalBox::Slot()
-			.AutoHeight()
-			.Padding(5)
-			[
-				SNew(SCheckBox)
-				.IsChecked(this, &SHeatMapWidget::GetZAxisCheckState)
-				.OnCheckStateChanged(this, &SHeatMapWidget::OnZAxisCheckStateChanged)
-				[
-					SNew(STextBlock)
-					.Text(FText::FromString("Draw Z-Axis"))
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(5)
+					[
+						SNew(SHorizontalBox)
+						+ SHorizontalBox::Slot()
+						.FillWidth(0.8f)
+						[
+							SNew(SSlider)
+							.Value(this, &SHeatMapWidget::GetColorScaleFactor)
+							.OnValueChanged(this, &SHeatMapWidget::OnColorScaleFactorChanged)
+						]
+						+ SHorizontalBox::Slot()
+						.FillWidth(0.2f)
+						[
+							SNew(STextBlock)
+							.Text(this, &SHeatMapWidget::GetColorScaleFactorText)
+						]
+					]
+
+					// Z軸表示のチェックボックス
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(5)
+					[
+						SNew(SCheckBox)
+						.IsChecked(this, &SHeatMapWidget::GetZAxisCheckState)
+						.OnCheckStateChanged(this, &SHeatMapWidget::OnZAxisCheckStateChanged)
+						[
+							SNew(STextBlock)
+							.Text(FText::FromString("Draw Z-Axis"))
+						]
+					]
+					
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(5)
+					[
+						SNew(STextBlock)
+						.Text(FText::FromString("DrawStepSize"))
+					]
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(5)
+					[
+						SNew(SHorizontalBox)
+						+ SHorizontalBox::Slot()
+						.FillWidth(0.8f)
+						[
+							SNew(SSlider)
+							.MinValue(50)
+							.MaxValue(1000)
+							.Value(this, &SHeatMapWidget::GetStepSize)
+							.OnValueChanged(this, &SHeatMapWidget::OnDrawStepSizeChanged)
+						]
+						+ SHorizontalBox::Slot()
+						.FillWidth(0.2f)
+						[
+							SNew(STextBlock)
+							.Text(this, &SHeatMapWidget::GetDrawStepSizeText)
+						]
+					]
+
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(5)
+					[
+						SNew(STextBlock)
+						.Text(FText::FromString("DrawZOffset"))
+					]
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(5)
+					[
+						SNew(SHorizontalBox)
+						+ SHorizontalBox::Slot()
+						.FillWidth(0.8f)
+						[
+							SNew(SSlider)
+							.MinValue(-2000)
+							.MaxValue(2000)
+							.Value(this, &SHeatMapWidget::GetDrawZOffset)
+							.OnValueChanged(this, &SHeatMapWidget::OnDrawZOffsetChanged)
+						]
+						+ SHorizontalBox::Slot()
+						.FillWidth(0.2f)
+						[
+							SNew(SEditableText)
+							.Text(this, &SHeatMapWidget::GetDrawZOffsetText)
+							.OnTextCommitted(this, &SHeatMapWidget::OnDrawZOffsetCommitted)
+						]
+					]
 				]
 			]
 		];
 	}
 
-	SHeatMapWidget()
+	SHeatMapWidget(): IsLoading(false)
 	{
 	}
-	
+
 	void Reload(const FString& Name, const FHeatMapTask& NewTask)
 	{
 		HostName = Name;
@@ -111,7 +182,7 @@ public:
 	}
 private:
 	FHeatMapTask SelectedTask = FHeatMapTask();
-	TSharedPtr<SSessionDetail> SSessionDetailRef;
+	TSharedPtr<SHeatMapDetail> SHeatMapDetailRef;
 	FString HostName;
 	LudiscanClient Client = LudiscanClient();
 	TWeakObjectPtr<UHeatMapEdMode> EdMode;
@@ -127,14 +198,19 @@ private:
 
 	void SetTask(const FHeatMapTask& NewTask)
 	{
-		SelectedTask = NewTask;
-		if (SSessionDetailRef.IsValid())
+		if (NewTask.TaskId == FHeatMapTask().TaskId)
 		{
-			SSessionDetailRef->SetSession(SelectedTask.Session);
+			return;
 		}
-		if (SSessionDetailRef.IsValid())
+		SelectedTask = NewTask;
+		if (SHeatMapDetailRef.IsValid())
 		{
-			SSessionDetailRef->SetIsLoading(true);
+			SHeatMapDetailRef->SetSession(SelectedTask.Session);
+			SHeatMapDetailRef->SetProject(SelectedTask.Project);
+		}
+		if (SHeatMapDetailRef.IsValid())
+		{
+			SHeatMapDetailRef->SetIsLoading(true);
 		}
 		if (World)
 		{
@@ -157,25 +233,26 @@ private:
 	void PollGetTask()
 	{
 		IsLoading = true;
-		if (SSessionDetailRef.IsValid())
+		if (SHeatMapDetailRef.IsValid())
 		{
-			SSessionDetailRef->SetIsLoading(true);
+			SHeatMapDetailRef->SetIsLoading(true);
 		}
 		Client.GetTask(
 			SelectedTask,
 			[this](const FHeatMapTask& Task) {
 				SelectedTask = Task;
 				SelectedTask.Log();
-				if (SSessionDetailRef.IsValid())
+				if (SHeatMapDetailRef.IsValid())
 				{
-					SSessionDetailRef->SetSession(SelectedTask.Session);
+					SHeatMapDetailRef->SetSession(SelectedTask.Session);
+					SHeatMapDetailRef->SetProject(SelectedTask.Project);
 				}
 				if (SelectedTask.Status == FHeatMapTask::Completed)
 				{
 					IsLoading = false;
-					if (SSessionDetailRef.IsValid())
+					if (SHeatMapDetailRef.IsValid())
 					{
-						SSessionDetailRef->SetIsLoading(false);
+						SHeatMapDetailRef->SetIsLoading(false);
 					}
 					
 					// タイマーを停止
@@ -196,9 +273,9 @@ private:
 				} else if (SelectedTask.Status == FHeatMapTask::Failed)
 				{
 					IsLoading = false;
-					if (SSessionDetailRef.IsValid())
+					if (SHeatMapDetailRef.IsValid())
 					{
-						SSessionDetailRef->SetIsLoading(false);
+						SHeatMapDetailRef->SetIsLoading(false);
 					}
 					if (World)
 					{
@@ -210,9 +287,9 @@ private:
 				} else
 				{
 					IsLoading = true;
-					if (SSessionDetailRef.IsValid())
+					if (SHeatMapDetailRef.IsValid())
 					{
-						SSessionDetailRef->SetIsLoading(true);
+						SHeatMapDetailRef->SetIsLoading(true);
 					}
 					// タスクがまだ進行中の場合、次のポーリングをスケジュール
 					if (World)
@@ -228,9 +305,9 @@ private:
 				Invalidate(EInvalidateWidgetReason::Paint);
 			},
 			[this](const FString& Message) {
-				if (SSessionDetailRef.IsValid())
+				if (SHeatMapDetailRef.IsValid())
 				{
-					SSessionDetailRef->SetIsLoading(false);
+					SHeatMapDetailRef->SetIsLoading(false);
 				}
 				// タイマーを停止
 				if (World)
@@ -268,6 +345,7 @@ private:
 	void OnZAxisCheckStateChanged(ECheckBoxState NewState) const
 	{
 		EdMode->SetDrawZAxis(NewState == ECheckBoxState::Checked);
+		EdMode->RefreshDrawPositions();
 	}
 
 	static void ActivateHeatmap()
@@ -288,5 +366,43 @@ private:
 			GLevelEditorModeTools().DeactivateMode(UHeatMapEdMode::EM_HeatMapEdMode);
 			UE_LOG(LogTemp, Warning, TEXT("Custom Gizmo Mode Deactivated"));
 		}
+	}
+
+	float GetStepSize() const
+	{
+		return EdMode->GetDrawStepSize();
+	}
+
+	void OnDrawStepSizeChanged(float X) const
+	{
+		EdMode->SetDrawStepSize(X);
+		EdMode->RefreshDrawPositions();
+	}
+	
+	FText GetDrawStepSizeText() const
+	{
+		return FText::AsNumber(EdMode->GetDrawStepSize());
+	}
+
+	float GetDrawZOffset() const
+	{
+		return EdMode->GetDrawZOffset();
+	}
+
+	void OnDrawZOffsetChanged(float X) const
+	{
+		EdMode->SetDrawZOffset(X);
+		EdMode->RefreshDrawPositions();
+	}
+
+	FText GetDrawZOffsetText() const
+	{
+		return FText::AsNumber(EdMode->GetDrawZOffset());
+	}
+	
+	void OnDrawZOffsetCommitted(const FText& Text, ETextCommit::Type Arg)
+	{
+		EdMode->SetDrawZOffset(FCString::Atoi(*Text.ToString()));
+		EdMode->RefreshDrawPositions();
 	}
 };
