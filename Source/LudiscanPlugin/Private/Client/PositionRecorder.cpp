@@ -75,23 +75,21 @@ void UPositionRecorder::FinishedSession()
 		auto Data = GetPositionData();
 		UE_LOG(LogTemp, Warning, TEXT("Data size: %d"), Data.Num());
 		int PlayerCount = WorldContext->GetNumPlayerControllers();
-		Client.CreatePositionsPost(
+		Async(EAsyncExecution::Thread, [this, PlayerCount, Data]()
+		{
+			Client.CreatePositionsPostSync(
 			PlaySessionCreate.ProjectId,
 			PlaySessionCreate.SessionId,
 			PlayerCount,
 			Data.Num(),
-			Data,
-			[this]() {
-				UE_LOG(LogTemp, Log, TEXT("Positions sent successfully."));
-				Client.FinishedSession(
-					PlaySessionCreate.ProjectId,
-					PlaySessionCreate.SessionId,
-					[this](FPlaySession PlaySession) {
-						UE_LOG(LogTemp, Log, TEXT("Session finished successfully."));
-					}
-				);
-			}
-		);
+			Data);
+			UE_LOG(LogTemp, Log, TEXT("Positions sent successfully."));
+			Client.FinishedSessionSync(
+				PlaySessionCreate.ProjectId,
+				PlaySessionCreate.SessionId);
+			UE_LOG(LogTemp, Log, TEXT("Session finished successfully."));
+		});
+		
 	}
 }
 

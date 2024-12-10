@@ -58,11 +58,113 @@ public:
         TFunction<void()> OnSuccess = []() {}
     );
 
+	bool CreatePositionsPostSync(
+		int projectId,
+		int sessionId,
+		int players,
+		int stampCount,
+		const TArray<TArray<FPlayerPosition>>& allPositions
+		)
+	{
+		if (projectId == 0 || sessionId == 0 || allPositions.Num() == 0)
+		{
+			UE_LOG(LogTemp, Error, TEXT("Project ID or Session ID is not set."));
+			return false;
+		}
+		TArray<uint8> BinaryData = ConstructBinaryData(players, stampCount, allPositions);
+		TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = CreateHttpContent(BinaryData);
+       
+		Request->SetURL(bApiHostName + "/api/v0/projects/" + FString::FromInt(projectId) + "/play_session/" + FString::FromInt(sessionId) + "/player_position_log");
+		Request->SetVerb("POST");
+	
+	    // 同期処理用のイベントを作成
+	    FEvent* RequestCompleteEvent = FPlatformProcess::GetSynchEventFromPool(false);
+	    bool bSuccess = false;
+	    FString ResponseContent;
+
+	    // コールバック内でイベントをトリガー
+	    Request->OnProcessRequestComplete().BindLambda([&bSuccess, &ResponseContent, RequestCompleteEvent](FHttpRequestPtr Req, FHttpResponsePtr Res, bool bWasSuccessful) {
+	        if (bWasSuccessful && Res.IsValid())
+	        {
+	            ResponseContent = Res->GetContentAsString();
+	            UE_LOG(LogTemp, Log, TEXT("CreatePositionsPostSync - Request succeeded: %s"), *ResponseContent);
+	            bSuccess = true;
+	        }
+	        else
+	        {
+	            UE_LOG(LogTemp, Error, TEXT("CreatePositionsPostSync - Request failed"));
+	            bSuccess = false;
+	        }
+	        // イベントをトリガーして待機を解除
+	        RequestCompleteEvent->Trigger();
+	    });
+
+	    // リクエストを送信
+	    Request->ProcessRequest();
+
+	    // イベントがトリガーされるまで待機
+	    RequestCompleteEvent->Wait();
+	    FPlatformProcess::ReturnSynchEventToPool(RequestCompleteEvent);
+		return bSuccess;
+	}
+
     void FinishedSession(
         int projectId,
         int sessionId,
         TFunction<void(FPlaySession)> OnSuccess = [](FPlaySession PlaySession) {}
     );
+
+	FPlaySession FinishedSessionSync(
+		int projectId,
+		int sessionId
+		)
+	{
+		if (projectId == 0 || sessionId == 0)
+		{
+			UE_LOG(LogTemp, Error, TEXT("Project ID or Session ID is not set."));
+			return FPlaySession();
+		}
+		TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
+		Request->SetURL(bApiHostName + "/api/v0/projects/" + FString::FromInt(projectId) + "/play_session/" + FString::FromInt(sessionId) + "/finish");
+		Request->SetVerb("POST");
+
+		FEvent* RequestCompleteEvent = FPlatformProcess::GetSynchEventFromPool(false);
+		bool bSuccess = false;
+		FString ResponseContent;
+		Request->OnProcessRequestComplete().BindLambda([&bSuccess, &ResponseContent, RequestCompleteEvent](FHttpRequestPtr Req, FHttpResponsePtr Res, bool bWasSuccessful) {
+			if (bWasSuccessful && Res.IsValid())
+			{
+				ResponseContent = Res->GetContentAsString();
+				UE_LOG(LogTemp, Log, TEXT("FinishedSessionSync - Request succeeded: %s"), *ResponseContent);
+				bSuccess = true;
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("FinishedSessionSync - Request failed"));
+				bSuccess = false;
+			}
+			RequestCompleteEvent->Trigger();
+		});
+		Request->ProcessRequest();
+		RequestCompleteEvent->Wait();
+		FPlatformProcess::ReturnSynchEventToPool(RequestCompleteEvent);
+
+		if (bSuccess)
+		{
+			TSharedPtr<FJsonObject> JsonObject;
+			TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ResponseContent);
+			if (FJsonSerializer::Deserialize(Reader, JsonObject) && JsonObject.IsValid())
+			{
+				FPlaySession PlaySession;
+				if (FPlaySession::ParseDataFromJson(JsonObject, PlaySession))
+				{
+					return PlaySession;
+				}
+			}
+		}
+		UE_LOG(LogTemp, Error, TEXT("FinishedSessionSync - Request failed"));
+		return FPlaySession();
+	}
 
     void CreateSessionHeatMap(
         int ProjectId,
