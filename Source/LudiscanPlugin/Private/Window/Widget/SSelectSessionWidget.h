@@ -21,181 +21,189 @@ public:
 
         ChildSlot
         [
-            SNew(SVerticalBox)
-        	+ SVerticalBox::Slot()
-		    .AutoHeight()
-		    .Padding(FMargin(10.0f, 5.0f))
-		    [
-		        SNew(SBorder)
-		        .BorderBackgroundColor(FLinearColor(0.2f, 0.2f, 0.2f, 1.0f)) // 背景色
-		        .Padding(FMargin(5.0f))
+        	SNew(SVerticalBox)
+			+ SVerticalBox::Slot()
+	        .AutoHeight()
+	        .MaxHeight(300)
+	        [
+	            SNew(SVerticalBox)
+        		+ SVerticalBox::Slot()
+			    .AutoHeight()
+			    .Padding(FMargin(10.0f, 5.0f))
+			    [
+			        SNew(SBorder)
+			        .BorderBackgroundColor(FLinearColor(0.2f, 0.2f, 0.2f, 1.0f)) // 背景色
+			        .Padding(FMargin(5.0f))
+			        [
+			            SNew(SHorizontalBox)
+			            + SHorizontalBox::Slot()
+			            .AutoWidth()
+			            .Padding(2.0f)
+			            [
+			                SNew(STextBlock)
+			                .Text_Lambda([this]() -> FText {
+		                		if (SelectedProject.Id != FProject().Id) {
+			                        return FText::FromString(FString::FromInt(SelectedProject.Id));
+			                    }
+			                    return FText::FromString("ID: -");
+			                })
+			                .TextStyle(FAppStyle::Get(), "NormalText")
+			                .MinDesiredWidth(50)
+			            ]
+			            + SHorizontalBox::Slot()
+			            .AutoWidth()
+			            .Padding(2.0f)
+			            [
+			                SNew(STextBlock)
+			                .Text_Lambda([this]() -> FText {
+			                    if (SelectedProject.Id != FProject().Id) {
+			                        return FText::FromString(SelectedProject.Name);
+			                    }
+			                    return FText::FromString("No Name");
+			                })
+			                .TextStyle(FAppStyle::Get(), "NormalText")
+			                .MinDesiredWidth(200)
+			            ]
+			            + SHorizontalBox::Slot()
+			            .AutoWidth()
+			            .Padding(2.0f)
+			            [
+			                SNew(STextBlock)
+			                .Text_Lambda([this]() -> FText {
+		                		if (SelectedProject.Id != FProject().Id) {
+			                        return FText::FromString(SelectedProject.Description);
+			                    }
+			                    return FText::FromString("No Description");
+			                })
+			                .TextStyle(FAppStyle::Get(), "NormalText")
+			                .MinDesiredWidth(180)
+			            ]
+			            + SHorizontalBox::Slot()
+			            .AutoWidth()
+			            .Padding(2.0f)
+			            [
+			                SNew(STextBlock)
+			                .Text_Lambda([this]() -> FText {
+		                		if (SelectedProject.Id != FProject().Id) {
+			                        return FText::FromString(FormatTime(SelectedProject.CreatedAt));
+			                    }
+			                    return FText::FromString("N/A");
+			                })
+			                .TextStyle(FAppStyle::Get(), "NormalText")
+			                .MinDesiredWidth(200)
+			            ]
+			        ]
+			    ]
+	            + SVerticalBox::Slot()
+        		.Padding(FMargin(10.0f, 5.0f)) // 左右: 10, 上下: 5
+				.HAlign(HAlign_Fill)           // 横幅いっぱいに
+				.VAlign(VAlign_Center)
+	            .AutoHeight()
+	            [
+	                SNew(SHorizontalBox)
+	                + SHorizontalBox::Slot()
+	                .FillWidth(1.0f)
+		            .Padding(5.0f, 0)
+	                [
+	                    SAssignNew(FilterTextBox, SEditableTextBox)
+	                    .OnTextChanged(this, &SSelectSessionWidget::OnFilterTextChanged)
+	                    .HintText(FText::FromString("Filter Sessions..."))
+	                ]
+	                + SHorizontalBox::Slot()
+	                .AutoWidth()
+	                [
+	                    SNew(SButton)
+	                    .Text(FText::FromString("MyDeviceSession"))
+	                    .OnClicked(this, &SSelectSessionWidget::OnSortByDeviceId)
+	                ]
+	            ]
+		        
+	            + SVerticalBox::Slot()
+	            .FillHeight(1.0f)
+        		.Padding(FMargin(10.0f, 5.0f)) // 左右: 10, 上下: 5
+				.HAlign(HAlign_Fill)           // 横幅いっぱいに
+				.VAlign(VAlign_Center)
+	            [
+	                SNew(SScrollBox)
+		            .Orientation(Orient_Vertical) // 縦方向のスクロールを有効にする
+		            + SScrollBox::Slot()
+		            [
+	            		SNew(SScrollBox)
+						.Orientation(Orient_Horizontal) // 横方向のスクロールを有効にする
+						+ SScrollBox::Slot()
+						[
+							SAssignNew(SessionListView, SListView<TSharedPtr<FPlaySession>>)
+							.ItemHeight(40)
+							.ListItemsSource(&FilteredSessionItems)
+							.OnGenerateRow(this, &SSelectSessionWidget::OnGenerateSessionRow)
+							.SelectionMode(ESelectionMode::Type::SingleToggle)
+							.OnSelectionChanged(this, &SSelectSessionWidget::OnSelectionChanged)
+							.HeaderRow(
+								SNew(SHeaderRow)
+								+ SHeaderRow::Column("ID")
+								.DefaultLabel(FText::FromString("ID"))
+								.OnSort(this, &SSelectSessionWidget::OnSortByID)
+								.SortMode_Lambda([this]() { return GetSortMode("ID"); })
+								.FixedWidth(50)
+								.HAlignCell(HAlign_Center) // 中央揃え
+								.VAlignCell(VAlign_Center)
+
+								+ SHeaderRow::Column("Name")
+								.DefaultLabel(FText::FromString("Session Name"))
+								.OnSort(this, &SSelectSessionWidget::OnSortByName)
+								.SortMode_Lambda([this]() { return GetSortMode("Name"); })
+								.FixedWidth(200)
+								.HAlignCell(HAlign_Center) // 中央揃え
+								.VAlignCell(VAlign_Center)
+
+								+ SHeaderRow::Column("Platform")
+								.DefaultLabel(FText::FromString("Platform"))
+								.OnSort(this, &SSelectSessionWidget::OnSortByPlatform)
+								.SortMode_Lambda([this]() { return GetSortMode("Platform"); })
+								.FixedWidth(100)
+								.HAlignCell(HAlign_Center) // 中央揃え
+								.VAlignCell(VAlign_Center)
+
+								+ SHeaderRow::Column("Device ID")
+								.DefaultLabel(FText::FromString("Device ID"))
+								.OnSort(this, &SSelectSessionWidget::OnSortByDeviceId)
+								.SortMode_Lambda([this]() { return GetSortMode("Device ID"); })
+								.FixedWidth(150)
+								.HAlignCell(HAlign_Center) // 中央揃え
+								.VAlignCell(VAlign_Center)
+
+								+ SHeaderRow::Column("Time")
+								.DefaultLabel(FText::FromString("End/Start Time"))
+								.OnSort(this, &SSelectSessionWidget::OnSortByTime)
+								.SortMode_Lambda([this]() { return GetSortMode("Time"); })
+								.FixedWidth(200)
+								.HAlignCell(HAlign_Center) // 中央揃え
+								.VAlignCell(VAlign_Center)
+							)	
+						]
+		            ]
+	            ]
+
+		        + SVerticalBox::Slot()
+		        .AutoHeight()
+		        .Padding(5.0f)
 		        [
 		            SNew(SHorizontalBox)
 		            + SHorizontalBox::Slot()
-		            .AutoWidth()
-		            .Padding(2.0f)
-		            [
-		                SNew(STextBlock)
-		                .Text_Lambda([this]() -> FText {
-		                	if (SelectedProject.Id != FProject().Id) {
-		                        return FText::FromString(FString::FromInt(SelectedProject.Id));
-		                    }
-		                    return FText::FromString("ID: -");
-		                })
-		                .TextStyle(FAppStyle::Get(), "NormalText")
-		                .MinDesiredWidth(50)
-		            ]
+		            .FillWidth(1.0f)
 		            + SHorizontalBox::Slot()
 		            .AutoWidth()
 		            .Padding(2.0f)
 		            [
-		                SNew(STextBlock)
-		                .Text_Lambda([this]() -> FText {
-		                    if (SelectedProject.Id != FProject().Id) {
-		                        return FText::FromString(SelectedProject.Name);
-		                    }
-		                    return FText::FromString("No Name");
-		                })
-		                .TextStyle(FAppStyle::Get(), "NormalText")
-		                .MinDesiredWidth(200)
+		                SNew(SButton)
+		                .Text(FText::FromString("Select All"))
+		                .OnClicked(this, &SSelectSessionWidget::OnSelectAllButtonClicked)
 		            ]
-		            + SHorizontalBox::Slot()
-		            .AutoWidth()
-		            .Padding(2.0f)
-		            [
-		                SNew(STextBlock)
-		                .Text_Lambda([this]() -> FText {
-		                	if (SelectedProject.Id != FProject().Id) {
-		                        return FText::FromString(SelectedProject.Description);
-		                    }
-		                    return FText::FromString("No Description");
-		                })
-		                .TextStyle(FAppStyle::Get(), "NormalText")
-		                .MinDesiredWidth(180)
-		            ]
-		            + SHorizontalBox::Slot()
-		            .AutoWidth()
-		            .Padding(2.0f)
-		            [
-		                SNew(STextBlock)
-		                .Text_Lambda([this]() -> FText {
-		                	if (SelectedProject.Id != FProject().Id) {
-		                        return FText::FromString(FormatTime(SelectedProject.CreatedAt));
-		                    }
-		                    return FText::FromString("N/A");
-		                })
-		                .TextStyle(FAppStyle::Get(), "NormalText")
-		                .MinDesiredWidth(200)
-		            ]
+					+ SHorizontalBox::Slot()
+					.FillWidth(1.0f)
 		        ]
-		    ]
-            + SVerticalBox::Slot()
-        	.Padding(FMargin(10.0f, 5.0f)) // 左右: 10, 上下: 5
-			.HAlign(HAlign_Fill)           // 横幅いっぱいに
-			.VAlign(VAlign_Center)
-            .AutoHeight()
-            [
-                SNew(SHorizontalBox)
-                + SHorizontalBox::Slot()
-                .FillWidth(1.0f)
-	            .Padding(5.0f, 0)
-                [
-                    SAssignNew(FilterTextBox, SEditableTextBox)
-                    .OnTextChanged(this, &SSelectSessionWidget::OnFilterTextChanged)
-                    .HintText(FText::FromString("Filter Sessions..."))
-                ]
-                + SHorizontalBox::Slot()
-                .AutoWidth()
-                [
-                    SNew(SButton)
-                    .Text(FText::FromString("MyDeviceSession"))
-                    .OnClicked(this, &SSelectSessionWidget::OnSortByDeviceId)
-                ]
-            ]
-	        
-            + SVerticalBox::Slot()
-            .FillHeight(1.0f)
-        	.Padding(FMargin(10.0f, 5.0f)) // 左右: 10, 上下: 5
-			.HAlign(HAlign_Fill)           // 横幅いっぱいに
-			.VAlign(VAlign_Center)
-            [
-                SNew(SBorder)
-	            [
-	            	SNew(SScrollBox)
-					.Orientation(Orient_Horizontal) // 横方向のスクロールを有効にする
-					+ SScrollBox::Slot()
-					[
-						SAssignNew(SessionListView, SListView<TSharedPtr<FPlaySession>>)
-						.ItemHeight(40)
-						.ListItemsSource(&FilteredSessionItems)
-						.OnGenerateRow(this, &SSelectSessionWidget::OnGenerateSessionRow)
-						.SelectionMode(ESelectionMode::Type::SingleToggle)
-						.OnSelectionChanged(this, &SSelectSessionWidget::OnSelectionChanged)
-						.HeaderRow(
-							SNew(SHeaderRow)
-							+ SHeaderRow::Column("ID")
-							.DefaultLabel(FText::FromString("ID"))
-							.OnSort(this, &SSelectSessionWidget::OnSortByID)
-							.SortMode_Lambda([this]() { return GetSortMode("ID"); })
-							.FixedWidth(50)
-							.HAlignCell(HAlign_Center) // 中央揃え
-							.VAlignCell(VAlign_Center)
-
-							+ SHeaderRow::Column("Name")
-							.DefaultLabel(FText::FromString("Session Name"))
-							.OnSort(this, &SSelectSessionWidget::OnSortByName)
-							.SortMode_Lambda([this]() { return GetSortMode("Name"); })
-							.FixedWidth(200)
-							.HAlignCell(HAlign_Center) // 中央揃え
-							.VAlignCell(VAlign_Center)
-
-							+ SHeaderRow::Column("Platform")
-							.DefaultLabel(FText::FromString("Platform"))
-							.OnSort(this, &SSelectSessionWidget::OnSortByPlatform)
-							.SortMode_Lambda([this]() { return GetSortMode("Platform"); })
-							.FixedWidth(100)
-							.HAlignCell(HAlign_Center) // 中央揃え
-							.VAlignCell(VAlign_Center)
-
-							+ SHeaderRow::Column("Device ID")
-							.DefaultLabel(FText::FromString("Device ID"))
-							.OnSort(this, &SSelectSessionWidget::OnSortByDeviceId)
-							.SortMode_Lambda([this]() { return GetSortMode("Device ID"); })
-							.FixedWidth(150)
-							.HAlignCell(HAlign_Center) // 中央揃え
-							.VAlignCell(VAlign_Center)
-
-							+ SHeaderRow::Column("Time")
-							.DefaultLabel(FText::FromString("End/Start Time"))
-							.OnSort(this, &SSelectSessionWidget::OnSortByTime)
-							.SortMode_Lambda([this]() { return GetSortMode("Time"); })
-							.FixedWidth(200)
-							.HAlignCell(HAlign_Center) // 中央揃え
-							.VAlignCell(VAlign_Center)
-						)	
-					]
-	            ]
-            ]
-
-	        + SVerticalBox::Slot()
-	        .AutoHeight()
-	        .Padding(5.0f)
-	        [
-	            SNew(SHorizontalBox)
-	            + SHorizontalBox::Slot()
-	            .FillWidth(1.0f)
-	            + SHorizontalBox::Slot()
-	            .AutoWidth()
-	            .Padding(2.0f)
-	            [
-	                SNew(SButton)
-	                .Text(FText::FromString("Select All"))
-	                .OnClicked(this, &SSelectSessionWidget::OnSelectAllButtonClicked)
-	            ]
-				+ SHorizontalBox::Slot()
-				.FillWidth(1.0f)
 	        ]
-        ];
+	    ];
 	}
 
 	void Reload(const FString& HostName, const FProject& Project)

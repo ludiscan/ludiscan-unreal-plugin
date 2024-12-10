@@ -33,6 +33,7 @@ public:
 			// ウィジェット切り替え部分
 			+ SVerticalBox::Slot()
 			.FillHeight(1.0f)
+			.MaxHeight(350)
 			[
 				SNew(SBorder)
 				[

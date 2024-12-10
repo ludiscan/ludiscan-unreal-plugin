@@ -29,11 +29,13 @@ public:
 			SNew(SVerticalBox)
 			+ SVerticalBox::Slot()
 			.AutoHeight()
+			.MaxHeight(300)
 			[
 				SNew(SScrollBox)
 				.Orientation(Orient_Vertical)
-				.AllowOverscroll(EAllowOverscroll::Yes)
 				+ SScrollBox::Slot()
+				.AutoSize()
+			
 				[
 					SAssignNew(VerticalBox, SVerticalBox)
 					// 現在のセッション情報を表示

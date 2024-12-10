@@ -451,7 +451,7 @@ inline void LudiscanClient::GetSessions(int projectId, TFunction<void(TArray<FPl
 	TFunction<void(FString)> OnFailure) const
 {
 	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
-	Request->SetURL(bApiHostName + FString::Printf(TEXT("/api/v0/projects/%d/play_session?limit=%d&offset=%d"), projectId, 30, 0));
+	Request->SetURL(bApiHostName + FString::Printf(TEXT("/api/v0/projects/%d/play_session?limit=%d&offset=%d&isFinished=true"), projectId, 30, 0));
 	Request->SetVerb("GET");
 	Request->OnProcessRequestComplete().BindLambda([OnSuccess, OnFailure](FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful) {
 		UE_LOG(LogTemp, Log, TEXT("Request completed"));
