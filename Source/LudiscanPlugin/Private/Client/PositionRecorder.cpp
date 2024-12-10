@@ -19,6 +19,14 @@ void UPositionRecorder::CreateSession(
 	TFunction<void(FPlaySession)> OnResponse
 )
 {
+	if (SessionTitle.IsEmpty())
+	{
+		SessionTitle  = "TitleNone";
+	}
+	if (OnResponse == nullptr)
+	{
+		OnResponse = [](FPlaySession PlaySession) {};
+	}
 	FString DeviceId = FPlatformProcess::ComputerName();
 	FString platform = FPlatformProperties::IniPlatformName();
 	FString appVersion = FApp::GetBuildVersion();

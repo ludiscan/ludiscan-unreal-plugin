@@ -203,6 +203,11 @@ inline int LudiscanClient::GetSaveHeatmapDrawStepSize(const int DefaultStepSize)
 inline void LudiscanClient::CreatePositionsPost(int projectId, int sessionId, int players, int stampCount,
 	const TArray<TArray<FPlayerPosition>>& allPositions, TFunction<void()> OnSuccess)
 {
+	if (projectId == 0 || sessionId == 0 || allPositions.Num() == 0)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Project ID or Session ID is not set."));
+		return;
+	}
 	TArray<uint8> BinaryData = ConstructBinaryData(players, stampCount, allPositions);
 	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = CreateHttpContent(BinaryData);
        
