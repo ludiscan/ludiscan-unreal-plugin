@@ -75,7 +75,7 @@ void UHeatMapEdMode::Render(const FSceneView* View, FViewport* Viewport, FPrimit
 		{
 			continue;
 		}
-		PDI->DrawPoint(Data.Key, Data.Value, 20.0f, SDPG_Foreground);
+		PDI->DrawPoint(Data.Key, Data.Value, FMath::Min(DrawStepSize, 25), SDPG_Foreground);
 	}
 }
 

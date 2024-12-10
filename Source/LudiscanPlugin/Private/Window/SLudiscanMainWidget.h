@@ -95,7 +95,7 @@ private:
 	TSharedPtr<SEditableTextBox> HostnameInputBox;
 	FString Hostname = "";
 	int StepSize = 200;
-	bool ZVisible = true;
+	bool ZVisible = false;
 	FProject SelectedProject = FProject();
 	FHeatMapTask SelectedTask = FHeatMapTask();
 	TFunction<void()> LastHeatMapTaskPolling = []() {};
