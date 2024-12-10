@@ -35,7 +35,10 @@ public:
 			.FillHeight(1.0f)
 			.MaxHeight(350)
 			[
-				SNew(SBorder)
+				SNew(SScrollBox)
+				.Orientation(Orient_Vertical)
+				+ SScrollBox::Slot()
+				.AutoSize()
 				[
 					SAssignNew(WidgetSwitcher, SWidgetSwitcher)
 					+ SWidgetSwitcher::Slot()
@@ -116,7 +119,6 @@ private:
 
 	void OnSessionSelected(TSharedPtr<FPlaySession> InSession)
 	{
-		UE_LOG(LogTemp, Log, TEXT("Selected Session: %d"), InSession->SessionId);
 
 		LastHeatMapTaskPolling = [this, InSession]()
 		{

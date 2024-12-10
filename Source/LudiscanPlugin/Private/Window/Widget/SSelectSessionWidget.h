@@ -1,6 +1,7 @@
 #pragma once
 #include "Client/FPlaySession.h"
 #include "Client/LudiscanClient.h"
+#include "Component/SCalcSessionsField.h"
 
 DECLARE_DELEGATE_OneParam(FOnSessionSelected, TSharedPtr<FPlaySession>);
 DECLARE_DELEGATE(FOnAllSessionSelected);
@@ -23,8 +24,7 @@ public:
         [
         	SNew(SVerticalBox)
 			+ SVerticalBox::Slot()
-	        .AutoHeight()
-	        .MaxHeight(300)
+	        .FillHeight(1)
 	        [
 	            SNew(SVerticalBox)
         		+ SVerticalBox::Slot()
@@ -94,113 +94,132 @@ public:
 			            ]
 			        ]
 			    ]
+
 	            + SVerticalBox::Slot()
-        		.Padding(FMargin(10.0f, 5.0f)) // 左右: 10, 上下: 5
-				.HAlign(HAlign_Fill)           // 横幅いっぱいに
-				.VAlign(VAlign_Center)
-	            .AutoHeight()
-	            [
-	                SNew(SHorizontalBox)
-	                + SHorizontalBox::Slot()
-	                .FillWidth(1.0f)
-		            .Padding(5.0f, 0)
-	                [
-	                    SAssignNew(FilterTextBox, SEditableTextBox)
-	                    .OnTextChanged(this, &SSelectSessionWidget::OnFilterTextChanged)
-	                    .HintText(FText::FromString("Filter Sessions..."))
-	                ]
-	                + SHorizontalBox::Slot()
-	                .AutoWidth()
-	                [
-	                    SNew(SButton)
-	                    .Text(FText::FromString("MyDeviceSession"))
-	                    .OnClicked(this, &SSelectSessionWidget::OnSortByDeviceId)
-	                ]
-	            ]
-		        
-	            + SVerticalBox::Slot()
-	            .FillHeight(1.0f)
-        		.Padding(FMargin(10.0f, 5.0f)) // 左右: 10, 上下: 5
-				.HAlign(HAlign_Fill)           // 横幅いっぱいに
-				.VAlign(VAlign_Center)
-	            [
-	                SNew(SScrollBox)
-		            .Orientation(Orient_Vertical) // 縦方向のスクロールを有効にする
-		            + SScrollBox::Slot()
-		            [
-	            		SNew(SScrollBox)
-						.Orientation(Orient_Horizontal) // 横方向のスクロールを有効にする
-						+ SScrollBox::Slot()
-						[
-							SAssignNew(SessionListView, SListView<TSharedPtr<FPlaySession>>)
-							.ItemHeight(40)
-							.ListItemsSource(&FilteredSessionItems)
-							.OnGenerateRow(this, &SSelectSessionWidget::OnGenerateSessionRow)
-							.SelectionMode(ESelectionMode::Type::SingleToggle)
-							.OnSelectionChanged(this, &SSelectSessionWidget::OnSelectionChanged)
-							.HeaderRow(
-								SNew(SHeaderRow)
-								+ SHeaderRow::Column("ID")
-								.DefaultLabel(FText::FromString("ID"))
-								.OnSort(this, &SSelectSessionWidget::OnSortByID)
-								.SortMode_Lambda([this]() { return GetSortMode("ID"); })
-								.FixedWidth(50)
-								.HAlignCell(HAlign_Center) // 中央揃え
-								.VAlignCell(VAlign_Center)
-
-								+ SHeaderRow::Column("Name")
-								.DefaultLabel(FText::FromString("Session Name"))
-								.OnSort(this, &SSelectSessionWidget::OnSortByName)
-								.SortMode_Lambda([this]() { return GetSortMode("Name"); })
-								.FixedWidth(200)
-								.HAlignCell(HAlign_Center) // 中央揃え
-								.VAlignCell(VAlign_Center)
-
-								+ SHeaderRow::Column("Platform")
-								.DefaultLabel(FText::FromString("Platform"))
-								.OnSort(this, &SSelectSessionWidget::OnSortByPlatform)
-								.SortMode_Lambda([this]() { return GetSortMode("Platform"); })
-								.FixedWidth(100)
-								.HAlignCell(HAlign_Center) // 中央揃え
-								.VAlignCell(VAlign_Center)
-
-								+ SHeaderRow::Column("Device ID")
-								.DefaultLabel(FText::FromString("Device ID"))
-								.OnSort(this, &SSelectSessionWidget::OnSortByDeviceId)
-								.SortMode_Lambda([this]() { return GetSortMode("Device ID"); })
-								.FixedWidth(150)
-								.HAlignCell(HAlign_Center) // 中央揃え
-								.VAlignCell(VAlign_Center)
-
-								+ SHeaderRow::Column("Time")
-								.DefaultLabel(FText::FromString("End/Start Time"))
-								.OnSort(this, &SSelectSessionWidget::OnSortByTime)
-								.SortMode_Lambda([this]() { return GetSortMode("Time"); })
-								.FixedWidth(200)
-								.HAlignCell(HAlign_Center) // 中央揃え
-								.VAlignCell(VAlign_Center)
-							)	
-						]
-		            ]
-	            ]
-
-		        + SVerticalBox::Slot()
 		        .AutoHeight()
-		        .Padding(5.0f)
 		        [
-		            SNew(SHorizontalBox)
-		            + SHorizontalBox::Slot()
-		            .FillWidth(1.0f)
-		            + SHorizontalBox::Slot()
-		            .AutoWidth()
-		            .Padding(2.0f)
-		            [
-		                SNew(SButton)
-		                .Text(FText::FromString("Select All"))
-		                .OnClicked(this, &SSelectSessionWidget::OnSelectAllButtonClicked)
-		            ]
-					+ SHorizontalBox::Slot()
-					.FillWidth(1.0f)
+			        SNew(SExpandableArea)
+			        .AreaTitle(FText::FromString("Load Session"))
+			        .BodyContent()
+			        [
+				        SNew(SVerticalBox)
+				        + SVerticalBox::Slot()
+        				.Padding(FMargin(10.0f, 5.0f)) // 左右: 10, 上下: 5
+						.HAlign(HAlign_Fill)           // 横幅いっぱいに
+						.VAlign(VAlign_Center)
+			            .AutoHeight()
+			            [
+			                SNew(SHorizontalBox)
+			                + SHorizontalBox::Slot()
+			                .FillWidth(1.0f)
+				            .Padding(5.0f, 0)
+			                [
+			                    SAssignNew(FilterTextBox, SEditableTextBox)
+			                    .OnTextChanged(this, &SSelectSessionWidget::OnFilterTextChanged)
+			                    .HintText(FText::FromString("Filter Sessions..."))
+			                ]
+			                + SHorizontalBox::Slot()
+			                .AutoWidth()
+			                [
+			                    SNew(SButton)
+			                    .Text(FText::FromString("MyDeviceSession"))
+			                    .OnClicked(this, &SSelectSessionWidget::OnSortByDeviceId)
+			                ]
+			            ]
+				        
+			            + SVerticalBox::Slot()
+			            .FillHeight(1.0f)
+        				.Padding(FMargin(10.0f, 5.0f)) // 左右: 10, 上下: 5
+						.HAlign(HAlign_Fill)           // 横幅いっぱいに
+						.VAlign(VAlign_Center)
+			            [
+			                SNew(SScrollBox)
+				            .Orientation(Orient_Vertical) // 縦方向のスクロールを有効にする
+				            + SScrollBox::Slot()
+				            [
+	            				SNew(SScrollBox)
+								.Orientation(Orient_Horizontal) // 横方向のスクロールを有効にする
+								+ SScrollBox::Slot()
+								[
+									SAssignNew(SessionListView, SListView<TSharedPtr<FPlaySession>>)
+									.ItemHeight(40)
+									.ListItemsSource(&FilteredSessionItems)
+									.OnGenerateRow(this, &SSelectSessionWidget::OnGenerateSessionRow)
+									.SelectionMode(ESelectionMode::Type::SingleToggle)
+									.OnSelectionChanged(this, &SSelectSessionWidget::OnSelectionChanged)
+									.HeaderRow(
+										SNew(SHeaderRow)
+										+ SHeaderRow::Column("ID")
+										.DefaultLabel(FText::FromString("ID"))
+										.OnSort(this, &SSelectSessionWidget::OnSortByID)
+										.SortMode_Lambda([this]() { return GetSortMode("ID"); })
+										.FixedWidth(50)
+										.HAlignCell(HAlign_Center) // 中央揃え
+										.VAlignCell(VAlign_Center)
+
+										+ SHeaderRow::Column("Name")
+										.DefaultLabel(FText::FromString("Session Name"))
+										.OnSort(this, &SSelectSessionWidget::OnSortByName)
+										.SortMode_Lambda([this]() { return GetSortMode("Name"); })
+										.FixedWidth(200)
+										.HAlignCell(HAlign_Center) // 中央揃え
+										.VAlignCell(VAlign_Center)
+
+										+ SHeaderRow::Column("Platform")
+										.DefaultLabel(FText::FromString("Platform"))
+										.OnSort(this, &SSelectSessionWidget::OnSortByPlatform)
+										.SortMode_Lambda([this]() { return GetSortMode("Platform"); })
+										.FixedWidth(100)
+										.HAlignCell(HAlign_Center) // 中央揃え
+										.VAlignCell(VAlign_Center)
+
+										+ SHeaderRow::Column("Device ID")
+										.DefaultLabel(FText::FromString("Device ID"))
+										.OnSort(this, &SSelectSessionWidget::OnSortByDeviceId)
+										.SortMode_Lambda([this]() { return GetSortMode("Device ID"); })
+										.FixedWidth(150)
+										.HAlignCell(HAlign_Center) // 中央揃え
+										.VAlignCell(VAlign_Center)
+
+										+ SHeaderRow::Column("Time")
+										.DefaultLabel(FText::FromString("End/Start Time"))
+										.OnSort(this, &SSelectSessionWidget::OnSortByTime)
+										.SortMode_Lambda([this]() { return GetSortMode("Time"); })
+										.FixedWidth(200)
+										.HAlignCell(HAlign_Center) // 中央揃え
+										.VAlignCell(VAlign_Center)
+									)	
+								]
+				            ]
+			            ]
+
+			        	+ SVerticalBox::Slot()
+						.AutoHeight()
+						.Padding(5.0f)
+						[
+							SNew(SHorizontalBox)
+							+ SHorizontalBox::Slot()
+							.FillWidth(1.0f)
+							+ SHorizontalBox::Slot()
+							.AutoWidth()
+							.Padding(2.0f)
+							[
+								SNew(SButton)
+								.Text(FText::FromString("Select All"))
+								.OnClicked(this, &SSelectSessionWidget::OnSelectAllButtonClicked)
+							]
+							+ SHorizontalBox::Slot()
+							.FillWidth(1.0f)
+						]
+			        ]
+		        ]
+
+		        // 
+	        	+ SVerticalBox::Slot()
+				.AutoHeight()
+				.Padding(5.0f)
+		        [
+		        	SAssignNew(SCalcSessionsFieldRef, SCalcSessionsField)
 		        ]
 	        ]
 	    ];
@@ -210,6 +229,10 @@ public:
 	{
 		SelectedProject = Project;
 		LoadSessions(HostName);
+		if (SCalcSessionsFieldRef.IsValid())
+		{
+			SCalcSessionsFieldRef->SetSelectedProject(Project);
+		}
 	}
 
 	virtual ~SSelectSessionWidget() override
@@ -235,6 +258,9 @@ private:
 	// ソート状態を保持する変数
     FName CurrentSortColumn = "ID";
     EColumnSortMode::Type CurrentSortMode = EColumnSortMode::Ascending;
+
+	TSharedPtr<SCalcSessionsField> SCalcSessionsFieldRef;
+
 
 	// ソートモード取得
 	EColumnSortMode::Type GetSortMode(const FName& ColumnId) const
@@ -403,7 +429,6 @@ private:
 				SessionItems.Reset();
 				for (const FPlaySession& Session : Sessions)
 				{
-					UE_LOG(LogTemp, Log, TEXT("Session: %s"), *Session.Name);
 					SessionItems.Add(MakeShared<FPlaySession>(Session));
 				}
 				OnFilterTextChanged(FilterTextBox->GetText());

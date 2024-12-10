@@ -27,7 +27,12 @@ public:
 	void StartRecording(UWorld* Context);
 	void StopRecording();
 
-	void FinishedRecording();
+	void FinishedSession();
+
+	void UpdateSessionData(
+		TMap<FString, FString> ExtraData,
+		TFunction<void()> OnSuccess = []() {}
+	);
 	const TArray<TArray<FPlayerPosition>>& GetPositionData() const;
 
 private:

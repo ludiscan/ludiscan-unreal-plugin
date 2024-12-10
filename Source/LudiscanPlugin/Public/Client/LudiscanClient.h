@@ -98,6 +98,13 @@ public:
         TFunction<void(FPlaySession)> OnResponse
     ) const;
 
+	void UpdateSession(
+		int ProjectId,
+		int SessionId,
+		TMap<FString, FString> ExtraData,
+		TFunction<void(FPlaySession)> OnResponse
+		) const;
+
     void GetProjects(
         TFunction<void(TArray<FProject>)> OnSuccess,
         TFunction<void(FString)> OnFailure = [](FString Message) {}
@@ -106,7 +113,9 @@ public:
     void GetSessions(
         int projectId,
         TFunction<void(TArray<FPlaySession>)> OnSuccess,
-        TFunction<void(FString)> OnFailure = [](FString Message) {}
+        TFunction<void(FString)> OnFailure = [](FString Message) {},
+        int Limit = 100,
+        int Offset = 0
     ) const;
 
 private:
@@ -447,11 +456,15 @@ inline void LudiscanClient::GetProjects(TFunction<void(TArray<FProject>)> OnSucc
 	Request->ProcessRequest();
 }
 
-inline void LudiscanClient::GetSessions(int projectId, TFunction<void(TArray<FPlaySession>)> OnSuccess,
-	TFunction<void(FString)> OnFailure) const
+inline void LudiscanClient::GetSessions(
+	int projectId,
+	TFunction<void(TArray<FPlaySession>)> OnSuccess,
+	TFunction<void(FString)> OnFailure,
+	int Limit,
+	int Offset) const
 {
 	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
-	Request->SetURL(bApiHostName + FString::Printf(TEXT("/api/v0/projects/%d/play_session?limit=%d&offset=%d&isFinished=true"), projectId, 30, 0));
+	Request->SetURL(bApiHostName + FString::Printf(TEXT("/api/v0/projects/%d/play_session?limit=%d&offset=%d&isFinished=true"), projectId, Limit, Offset));
 	Request->SetVerb("GET");
 	Request->OnProcessRequestComplete().BindLambda([OnSuccess, OnFailure](FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful) {
 		UE_LOG(LogTemp, Log, TEXT("Request completed"));
@@ -551,4 +564,50 @@ inline TSharedRef<IHttpRequest> LudiscanClient::CreateHttpContent(const TArray<u
 	Request->SetContent(PayloadData);
         
 	return Request;
+}
+
+inline void LudiscanClient::UpdateSession(
+	int ProjectId,
+	int SessionId,
+	TMap<FString, FString> ExtraData,
+	TFunction<void(FPlaySession)> OnResponse) const
+{
+	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
+	Request->SetURL(bApiHostName + "/api/v0/projects/" + FString::FromInt(ProjectId) + "/play_session/" + FString::FromInt(SessionId));
+	Request->SetVerb("PUT");
+	// JSONデータの作成
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject());
+	TSharedPtr<FJsonObject> MetaData = MakeShareable(new FJsonObject());
+	for (const auto& Pair : ExtraData)
+	{
+		MetaData->SetStringField(Pair.Key, Pair.Value);
+	}
+	JsonObject->SetObjectField("metaData", MetaData);
+	FString RequestBody;
+	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&RequestBody);
+	FJsonSerializer::Serialize(JsonObject.ToSharedRef(), Writer);
+	// リクエストボディ設定
+	Request->SetContentAsString(RequestBody);
+	Request->SetHeader("Content-Type", "application/json");
+	Request->OnProcessRequestComplete().BindLambda([OnResponse, this](FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful) {
+		if (bWasSuccessful && Response.IsValid())
+		{
+			FString ResponseContent = Response->GetContentAsString();
+			TSharedPtr<FJsonObject> JsonObject;
+			TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ResponseContent);
+			if (FJsonSerializer::Deserialize(Reader, JsonObject) && JsonObject.IsValid())
+			{
+				if (FPlaySession PlaySession; FPlaySession::ParseDataFromJson(JsonObject, PlaySession))
+				{
+					OnResponse(PlaySession);
+				}
+			}
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("Request failed"));
+		}
+	});
+
+	Request->ProcessRequest();
 }

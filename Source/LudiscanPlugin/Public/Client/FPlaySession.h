@@ -39,10 +39,10 @@ struct FPlaySession
 		// 各フィールドをパース
 		OutData.SessionId = JsonObject->GetIntegerField(TEXT("sessionId"));
 		OutData.ProjectId = JsonObject->GetIntegerField(TEXT("projectId"));
-		OutData.Name = JsonObject->GetStringField(TEXT("name"));
-		OutData.DeviceId = JsonObject->GetStringField(TEXT("deviceId"));
-		OutData.Platform = JsonObject->GetStringField(TEXT("platform"));
-		OutData.AppVersion = JsonObject->GetStringField(TEXT("appVersion"));
+		JsonObject->TryGetStringField(TEXT("name"), OutData.Name);
+		JsonObject->TryGetStringField(TEXT("deviceId"), OutData.DeviceId);
+		JsonObject->TryGetStringField(TEXT("platform"), OutData.Platform);
+		JsonObject->TryGetStringField(TEXT("appVersion"), OutData.AppVersion);
 
 		// MetaData を TMap<FString, FString> に変換
 		const TSharedPtr<FJsonObject>* MetaDataObject;
@@ -56,9 +56,9 @@ struct FPlaySession
 				}
 			}
 		}
-		OutData.StartTime = JsonObject->GetStringField(TEXT("startTime"));
-		OutData.EndTime = JsonObject->GetStringField(TEXT("endTime"));
-		OutData.bIsPlaying = JsonObject->GetBoolField(TEXT("isPlaying"));
+		JsonObject->TryGetStringField(TEXT("startTime"), OutData.StartTime);
+		JsonObject->TryGetStringField(TEXT("endTime"), OutData.EndTime);
+		JsonObject->TryGetBoolField(TEXT("isPlaying"), OutData.bIsPlaying);
 
 		return true;
 	}

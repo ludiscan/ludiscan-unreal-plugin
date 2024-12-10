@@ -59,18 +59,13 @@ void UPositionRecorder::StopRecording() {
 	}
 }
 
-void UPositionRecorder::FinishedRecording()
+void UPositionRecorder::FinishedSession()
 {
 	StopRecording();
 	if (PlaySessionCreate.bIsPlaying)
 	{
 		auto Data = GetPositionData();
 		UE_LOG(LogTemp, Warning, TEXT("Data size: %d"), Data.Num());
-		// for (int i = 0; i < Data.Num(); i++) {
-		// 	for (int j = 0; j < Data[i].Num(); j++) {
-		// 		UE_LOG(LogTemp, Warning, TEXT("Player %d: X=%f, Y=%f, Z=%f"), Data[i][j].Player, Data[i][j].X, Data[i][j].Y, Data[i][j].Z);
-		// 	}
-		// }
 		int PlayerCount = WorldContext->GetNumPlayerControllers();
 		Client.CreatePositionsPost(
 			PlaySessionCreate.ProjectId,
@@ -116,6 +111,30 @@ void UPositionRecorder::RecordPlayerPositions() {
 		}
 	}
 	PositionData.Add(CurrentPositions);
+}
+
+void UPositionRecorder::UpdateSessionData(
+	TMap<FString, FString> ExtraData,
+	TFunction<void()> OnSuccess
+	)
+{
+	if (PlaySessionCreate.SessionId == 0) {
+		UE_LOG(LogTemp, Warning, TEXT("Session not created."));
+		return;
+	}
+	if (ExtraData.Num() == 0) {
+		UE_LOG(LogTemp, Warning, TEXT("No data to update."));
+		return;
+	}
+	Client.UpdateSession(
+		PlaySessionCreate.ProjectId,
+		PlaySessionCreate.SessionId,
+		ExtraData,
+		[this, OnSuccess](FPlaySession PlaySession) {
+			UE_LOG(LogTemp, Log, TEXT("Session updated successfully."));
+			OnSuccess();
+		}
+	);
 }
 
 const TArray<TArray<FPlayerPosition>>& UPositionRecorder::GetPositionData() const {
