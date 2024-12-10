@@ -108,7 +108,7 @@ public:
 						.FillWidth(0.8f)
 						[
 							SNew(SSlider)
-							.MinValue(50)
+							.MinValue(10)
 							.MaxValue(1000)
 							.Value(this, &SHeatMapWidget::GetStepSize)
 							.OnValueChanged(this, &SHeatMapWidget::OnDrawStepSizeChanged)
@@ -145,7 +145,7 @@ public:
 						+ SHorizontalBox::Slot()
 						.FillWidth(0.2f)
 						[
-							SNew(SEditableText)
+							SNew(SEditableTextBox)
 							.Text(this, &SHeatMapWidget::GetDrawZOffsetText)
 							.OnTextCommitted(this, &SHeatMapWidget::OnDrawZOffsetCommitted)
 						]
