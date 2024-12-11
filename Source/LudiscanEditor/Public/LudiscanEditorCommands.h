@@ -4,17 +4,17 @@
 
 #include "CoreMinimal.h"
 #include "Framework/Commands/Commands.h"
-#include "LudiscanPluginStyle.h"
+#include "LudiscanEditorStyle.h"
 
-class FLudiscanPluginCommands : public TCommands<FLudiscanPluginCommands>
+class FLudiscanEditorCommands : public TCommands<FLudiscanEditorCommands>
 {
 public:
 
-	FLudiscanPluginCommands()
-		: TCommands<FLudiscanPluginCommands>(
+	FLudiscanEditorCommands()
+		: TCommands<FLudiscanEditorCommands>(
 		TEXT("LudiscanPlugin"),
 			NSLOCTEXT("Contexts", "LudiscanPlugin", "LudiscanPlugin"),
-			NAME_None, FLudiscanPluginStyle::GetStyleSetName()) {
+			NAME_None, FLudiscanEditorStyle::GetStyleSetName()) {
 	}
 
 	// TCommands<> interface

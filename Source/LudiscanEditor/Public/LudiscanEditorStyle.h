@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "Styling/SlateStyle.h"
 
-class FLudiscanPluginStyle
+class FLudiscanEditorStyle
 {
 public:
 	static void Initialize();

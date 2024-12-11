@@ -25,9 +25,7 @@ public class LudiscanPlugin : ModuleRules
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
-				"Core", "HTTP", "Json", "JsonUtilities", "RHI", "RenderCore", "Slate", "SlateCore", "UnrealEd",
-				"InteractiveToolsFramework",
-				"EditorInteractiveToolsFramework",
+				"Core", "HTTP", "Json", "JsonUtilities", "RHI", "RenderCore", "Slate", "SlateCore",
 				// ... add other public dependencies that you statically link with here ...
 			}
 		);
@@ -38,8 +36,6 @@ public class LudiscanPlugin : ModuleRules
 			{
 				"Projects",
 				"InputCore",
-				"EditorFramework",
-				"UnrealEd",
 				"ToolMenus",
 				"CoreUObject",
 				"Engine",
@@ -47,10 +43,6 @@ public class LudiscanPlugin : ModuleRules
 				"SlateCore",
 				"Core", "HTTP", "Json", "JsonUtilities", "RHI", "RenderCore",
 				"CoreUObject",
-				"EditorStyle",
-				"LevelEditor",
-				"InteractiveToolsFramework",
-				"EditorInteractiveToolsFramework",
 				// ... add private dependencies that you statically link with here ...	
 			}
 		);

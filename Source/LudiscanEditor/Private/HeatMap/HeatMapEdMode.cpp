@@ -2,7 +2,7 @@
 
 
 #include "HeatMap/HeatMapEdMode.h"
-#include "LudiscanPluginCommands.h"
+#include "LudiscanEditorCommands.h"
 #include "Client/LudiscanClient.h"
 
 #define LOCTEXT_NAMESPACE "HeatMapEdModeEditorMode"
@@ -91,7 +91,7 @@ void UHeatMapEdMode::CreateToolkit()
 
 TMap<FName, TArray<TSharedPtr<FUICommandInfo>>> UHeatMapEdMode::GetModeCommands() const
 {
-	return FLudiscanPluginCommands::Get().GetCommands();
+	return FLudiscanEditorCommands::Get().GetCommands();
 }
 
 void UHeatMapEdMode::CalculateBoundingBox()

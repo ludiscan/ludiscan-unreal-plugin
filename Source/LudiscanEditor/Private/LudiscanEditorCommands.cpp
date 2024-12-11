@@ -1,10 +1,10 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
-#include "LudiscanPluginCommands.h"
+#include "LudiscanEditorCommands.h"
 
 #define LOCTEXT_NAMESPACE "FLudiscanPluginModule"
 
-void FLudiscanPluginCommands::RegisterCommands()
+void FLudiscanEditorCommands::RegisterCommands()
 {
 	TArray <TSharedPtr<FUICommandInfo>>& ToolCommands = Commands.FindOrAdd(NAME_Default);
 	UI_COMMAND(OpenPluginWindow, "LudiscanPlugin", "Bring up LudiscanPlugin window", EUserInterfaceActionType::Button, FInputChord());
@@ -14,9 +14,9 @@ void FLudiscanPluginCommands::RegisterCommands()
 	ToolCommands.Add(InteractiveTool);
 }
 
-TMap<FName, TArray<TSharedPtr<FUICommandInfo>>> FLudiscanPluginCommands::GetCommands()
+TMap<FName, TArray<TSharedPtr<FUICommandInfo>>> FLudiscanEditorCommands::GetCommands()
 {
-	return FLudiscanPluginCommands::Get().Commands;
+	return FLudiscanEditorCommands::Get().Commands;
 }
 
 #undef LOCTEXT_NAMESPACE

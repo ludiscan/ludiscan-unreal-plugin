@@ -1,4 +1,4 @@
-#include "LudiscanPluginStyle.h"
+#include "LudiscanEditorStyle.h"
 
 #include "Styling/SlateStyleRegistry.h"
 #include "Framework/Application/SlateApplication.h"
@@ -6,9 +6,9 @@
 #include "Styling/SlateStyleMacros.h"
 
 #define RootToContentDir Style->RootToContentDir
-TSharedPtr<FSlateStyleSet> FLudiscanPluginStyle::StyleInstance = nullptr;
+TSharedPtr<FSlateStyleSet> FLudiscanEditorStyle::StyleInstance = nullptr;
 
-void FLudiscanPluginStyle::Initialize()
+void FLudiscanEditorStyle::Initialize()
 {
 	if (!StyleInstance.IsValid())
 	{
@@ -17,14 +17,14 @@ void FLudiscanPluginStyle::Initialize()
 	}
 }
 
-void FLudiscanPluginStyle::Shutdown()
+void FLudiscanEditorStyle::Shutdown()
 {
 	FSlateStyleRegistry::UnRegisterSlateStyle(*StyleInstance);
 	ensure(StyleInstance.IsUnique());
 	StyleInstance.Reset();
 }
 
-FName FLudiscanPluginStyle::GetStyleSetName()
+FName FLudiscanEditorStyle::GetStyleSetName()
 {
 	static FName StyleSetName(TEXT("LudiscanPluginStyle"));
 	return StyleSetName;
@@ -33,7 +33,7 @@ FName FLudiscanPluginStyle::GetStyleSetName()
 const FVector2D Icon16x16(16.0f, 16.0f);
 const FVector2D Icon20x20(20.0f, 20.0f);
 
-TSharedRef<FSlateStyleSet> FLudiscanPluginStyle::Create()
+TSharedRef<FSlateStyleSet> FLudiscanEditorStyle::Create()
 {
 	TSharedRef<FSlateStyleSet> Style = MakeShareable(new FSlateStyleSet("LudiscanPluginStyle"));
 	Style->SetContentRoot(IPluginManager::Get().FindPlugin("LudiscanPlugin")->GetBaseDir() / TEXT("Resources"));
@@ -43,7 +43,7 @@ TSharedRef<FSlateStyleSet> FLudiscanPluginStyle::Create()
 	return Style;
 }
 
-void FLudiscanPluginStyle::ReloadTextures()
+void FLudiscanEditorStyle::ReloadTextures()
 {
 	if (FSlateApplication::IsInitialized())
 	{
@@ -52,7 +52,7 @@ void FLudiscanPluginStyle::ReloadTextures()
 }
 
 
-const ISlateStyle& FLudiscanPluginStyle::Get()
+const ISlateStyle& FLudiscanEditorStyle::Get()
 {
 	return *StyleInstance;
 }
