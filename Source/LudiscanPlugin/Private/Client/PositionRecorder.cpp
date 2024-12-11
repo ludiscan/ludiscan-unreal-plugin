@@ -10,6 +10,7 @@ UPositionRecorder::UPositionRecorder(): StartTime(0), WorldContext(nullptr)
 	Client = LudiscanClient();
 	FString HostName = LudiscanClient::GetSaveApiHostName("https://yuhi.tokyo");
 	Client.SetConfig(HostName);
+	IsInSession = false;
 }
 
 void UPositionRecorder::CreateSession(
@@ -19,6 +20,16 @@ void UPositionRecorder::CreateSession(
 	TFunction<void(FPlaySession)> OnResponse
 )
 {
+	if (IsInSession)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Session already in progress."));
+		return;
+	}
+	if (NewProjectId == 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Project ID not set."));
+		return;
+	}
 	if (SessionTitle.IsEmpty())
 	{
 		SessionTitle  = "TitleNone";
@@ -45,6 +56,7 @@ void UPositionRecorder::CreateSession(
 		LevelName,
 		extraData,
 		[this, OnResponse](FPlaySession PlaySession) {
+			IsInSession = true;
 			PlaySessionCreate = PlaySession;
 			OnResponse(PlaySession);
 		}
@@ -70,6 +82,10 @@ void UPositionRecorder::StopRecording() {
 void UPositionRecorder::UploadPositions()
 {
 	StopRecording();
+	if (!IsInSession || PlaySessionCreate.SessionId == 0) {
+		UE_LOG(LogTemp, Warning, TEXT("Session not created."));
+		return;
+	}
 	auto Data = GetPositionData();
 	UE_LOG(LogTemp, Warning, TEXT("Data size: %d"), Data.Num());
 	int PlayerCount = WorldContext->GetNumPlayerControllers();
@@ -87,13 +103,14 @@ void UPositionRecorder::UploadPositions()
 
 void UPositionRecorder::FinishedSession()
 {
-	if (PlaySessionCreate.bIsPlaying)
+	if (PlaySessionCreate.bIsPlaying && PlaySessionCreate.SessionId != 0 && IsInSession)
 	{
 		Async(EAsyncExecution::Thread, [this]()
 		{
 			Client.FinishedSession(
 				PlaySessionCreate.ProjectId,
 				PlaySessionCreate.SessionId);
+			IsInSession = false;
 			UE_LOG(LogTemp, Log, TEXT("Session finished successfully."));
 		});
 	}
@@ -130,6 +147,10 @@ void UPositionRecorder::UpdateSessionData(
 	TFunction<void()> OnSuccess
 	)
 {
+	if (!IsInSession) {
+		UE_LOG(LogTemp, Warning, TEXT("Session not in progress."));
+		return;
+	}
 	if (PlaySessionCreate.SessionId == 0) {
 		UE_LOG(LogTemp, Warning, TEXT("Session not created."));
 		return;

@@ -97,5 +97,8 @@ private:
 	// 実行中のsession
 	FPlaySession PlaySessionCreate;
 
+	UPROPERTY(BlueprintReadOnly, Category = "Ludiscan|Session", meta = (AllowPrivateAccess = "true"))
+	bool IsInSession = false;
+
 	void RecordPlayerPositions();
 };
