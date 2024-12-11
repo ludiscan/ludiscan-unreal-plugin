@@ -64,6 +64,9 @@ public:
 	void StopRecording();
 
 	UFUNCTION(BlueprintCallable, Category = "Ludiscan|Session")
+	void UploadPositions();
+
+	UFUNCTION(BlueprintCallable, Category = "Ludiscan|Session")
 	void FinishedSession();
 
 	void UpdateSessionData(

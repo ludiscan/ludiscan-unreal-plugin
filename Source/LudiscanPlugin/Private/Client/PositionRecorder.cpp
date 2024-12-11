@@ -67,32 +67,35 @@ void UPositionRecorder::StopRecording() {
 	}
 }
 
-void UPositionRecorder::FinishedSession()
+void UPositionRecorder::UploadPositions()
 {
 	StopRecording();
+	auto Data = GetPositionData();
+	UE_LOG(LogTemp, Warning, TEXT("Data size: %d"), Data.Num());
+	int PlayerCount = WorldContext->GetNumPlayerControllers();
+	Async(EAsyncExecution::Thread, [this, PlayerCount, Data]()
+	{
+		Client.CreatePositionsPostSync(
+		PlaySessionCreate.ProjectId,
+		PlaySessionCreate.SessionId,
+		PlayerCount,
+		Data.Num(),
+		Data);
+		UE_LOG(LogTemp, Log, TEXT("Positions sent successfully."));
+	});
+}
+
+void UPositionRecorder::FinishedSession()
+{
 	if (PlaySessionCreate.bIsPlaying)
 	{
-		auto Data = GetPositionData();
-		UE_LOG(LogTemp, Warning, TEXT("Data size: %d"), Data.Num());
-		int PlayerCount = WorldContext->GetNumPlayerControllers();
-		Async(EAsyncExecution::Thread, [this, PlayerCount, Data]()
+		Async(EAsyncExecution::Thread, [this]()
 		{
-			const FString HostName = Client.GetSaveApiHostName("https://yuhi.tokyo");
-			Client.SetConfig(HostName);
-			Client.CreatePositionsPostSync(
-			PlaySessionCreate.ProjectId,
-			PlaySessionCreate.SessionId,
-			PlayerCount,
-			Data.Num(),
-			Data);
-			UE_LOG(LogTemp, Log, TEXT("Positions sent successfully."));
-			Client.SetConfig(HostName);
-			Client.FinishedSessionSync(
+			Client.FinishedSession(
 				PlaySessionCreate.ProjectId,
 				PlaySessionCreate.SessionId);
 			UE_LOG(LogTemp, Log, TEXT("Session finished successfully."));
 		});
-		
 	}
 }
 
