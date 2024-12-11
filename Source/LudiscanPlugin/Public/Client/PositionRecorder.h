@@ -27,9 +27,25 @@ public:
 
 	UFUNCTION(BlueprintCallable, meta=(WorldContext="WorldContextObject"), Category = "Ludiscan|Session")
 	void StartSession(
-	UObject* WorldContextObject)
+		UObject* WorldContextObject)
 	{
 		const int ProjectId = LudiscanClient::GetSaveProjectId(1);
+		CreateSession(
+		WorldContextObject->GetWorld(),
+			ProjectId,
+			"TestSession",
+			[this](FPlaySession PlaySession) {
+				UE_LOG(LogTemp, Log, TEXT("Session ID: %d"), PlaySession.SessionId);
+				StartRecording(GetWorld());
+			}
+		);
+	}
+
+	UFUNCTION(BlueprintCallable, meta=(WorldContext="WorldContextObject"), Category = "Ludiscan|Session")
+	void StartSessionWithSetProject(
+		UObject* WorldContextObject,
+		int ProjectId)
+	{
 		CreateSession(
 		WorldContextObject->GetWorld(),
 			ProjectId,
