@@ -11,18 +11,16 @@ public:
 		Content();
 	}
 
-	void SetSelectedProject(FProject Project)
+	void SetDataListSources(const TArray<TSharedPtr<FPlaySession>>& DataLisSource)
 	{
-		SelectedProject = Project;
+		this->DataListSource = DataLisSource;
 	}
 private:
 	
 	FString CalcDataName = "";
-	LudiscanClient Client = LudiscanClient();
+	TArray<TSharedPtr<FPlaySession>> DataListSource;
 
 	TArray<float> DataNames;
-
-	FProject SelectedProject = FProject();
 
 	void OnCalcDataNameChanged(const FText& Text)
 	{
@@ -176,49 +174,33 @@ private:
 	FReply OnCalcButtonClicked()
 	{
 		DataNames.Empty();
-		if (SelectedProject.Id == 0)
-		{
-			FText DialogText = FText::FromString("Please select a project first.");
-			FMessageDialog::Open(EAppMsgType::Ok, DialogText);
-			return FReply::Handled();
-		}
 		if (CalcDataName.IsEmpty())
 		{
 			FText DialogText = FText::FromString("Please input data name.");
 			FMessageDialog::Open(EAppMsgType::Ok, DialogText);
 			return FReply::Handled();
 		}
-		Client.GetSessions(
-			SelectedProject.Id,
-			[this](TArray<FPlaySession> Sessions) {
-				for (const FPlaySession& Session : Sessions)
+		for (const TSharedPtr<FPlaySession>& Session : DataListSource)
+		{
+			for (const TPair<FString, FString> MetaDataPair: Session->MetaData)
+			{
+				if (MetaDataPair.Key.ToLower() == CalcDataName.ToLower())
 				{
-					for (const TPair<FString, FString> MetaDataPair: Session.MetaData)
+					if (MetaDataPair.Value.IsNumeric())
 					{
-						if (MetaDataPair.Key.ToLower() == CalcDataName.ToLower())
-						{
-							if (MetaDataPair.Value.IsNumeric())
-							{
-								float Value = FCString::Atof(*MetaDataPair.Value);
-								DataNames.Add(Value);
-							}
-						}
+						float Value = FCString::Atof(*MetaDataPair.Value);
+						DataNames.Add(Value);
 					}
-					if (DataNames.Num() == 0)
-					{
-						FText DialogText = FText::FromString("No data found.");
-						FMessageDialog::Open(EAppMsgType::Ok, DialogText);
-						return;
-					}
-				
 				}
-			},
-			[](FString ErrorMessage) {
-				FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(ErrorMessage));
-			},
-			200,
-			0
-		);
+			}
+			if (DataNames.Num() == 0)
+			{
+				FText DialogText = FText::FromString("No data found.");
+				FMessageDialog::Open(EAppMsgType::Ok, DialogText);
+				return FReply::Handled();
+			}
+				
+		}
 		return FReply::Handled();
 	}
 };

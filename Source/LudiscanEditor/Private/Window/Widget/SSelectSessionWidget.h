@@ -229,10 +229,6 @@ public:
 	{
 		SelectedProject = Project;
 		LoadSessions(HostName);
-		if (SCalcSessionsFieldRef.IsValid())
-		{
-			SCalcSessionsFieldRef->SetSelectedProject(Project);
-		}
 	}
 
 	virtual ~SSelectSessionWidget() override
@@ -394,19 +390,62 @@ private:
 	void OnFilterTextChanged(const FText& NewText)
 	{
 		const FString FilterText = NewText.ToString();
-
-		if (FilterText.IsEmpty())
+		FilteredSessionItems.Empty();
+		if (!FilterText.IsEmpty())
 		{
-			FilteredSessionItems = SessionItems; // フィルターなしの場合、すべてを表示
+			TArray<FString> FilterTexts;
+			FilterText.ParseIntoArray(FilterTexts, TEXT(","), true);
+			if (FilterTexts.Num() != 0)
+			{
+				for (const FString& Text : FilterTexts)
+				{
+					if (Text.IsEmpty())
+					{
+						continue;
+					}
+					TArray<FString> KeyValue;
+					Text.ParseIntoArray(KeyValue, TEXT(":"), true);
+
+					for (TSharedPtr<FPlaySession> PlaySession : SessionItems)
+					{
+						if (KeyValue.Num() == 2)
+						{
+							// find metadata
+							if (PlaySession->MetaData.Num() > 0)
+							{
+								for (const TPair<FString, FString>& MetaData : PlaySession->MetaData)
+								{
+									if (MetaData.Key.ToLower() == KeyValue[0].ToLower() && MetaData.Value == KeyValue[1].ToLower())
+									{
+										FilteredSessionItems.Add(PlaySession);
+									}
+								}
+							}
+						} else
+						{
+							FilteredSessionItems = SessionItems.FilterByPredicate([&](const TSharedPtr<FPlaySession>& Session) {
+								return FString::FromInt(Session->SessionId).Contains(Text) ||
+									Session->Name.Contains(Text) ||
+									Session->DeviceId.Contains(Text) ||
+									Session->Platform.Contains(Text) ||
+									Session->AppVersion.Contains(Text) ||
+									Session->MetaData.Contains(Text);
+							});
+						}
+					} 
+				}
+			} else
+			{
+				FilteredSessionItems = SessionItems;
+			}
 		}
 		else
 		{
-			FilteredSessionItems = SessionItems.FilterByPredicate([&](const TSharedPtr<FPlaySession>& Session) {
-				return Session->Name.Contains(FilterText) ||
-					   Session->Platform.Contains(FilterText) ||
-					   Session->DeviceId.Contains(FilterText) ||
-					   FString::FromInt(Session->SessionId).Contains(FilterText);
-			});
+			FilteredSessionItems = SessionItems;
+		}
+		if (SCalcSessionsFieldRef.IsValid())
+		{
+			SCalcSessionsFieldRef->SetDataListSources(FilteredSessionItems);
 		}
 		SessionListView->RequestListRefresh();
 	}
