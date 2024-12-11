@@ -506,7 +506,7 @@ inline void LudiscanClient::CreateSession(
 	JsonObject->SetStringField("appVersion", AppVersion);
 
 	TSharedPtr<FJsonObject> MetaData = MakeShareable(new FJsonObject());
-	MetaData->SetStringField("mapName", levelName);
+	MetaData->SetStringField("levelName", levelName);
 	for (const auto& Pair : ExtraData)
 	{
 		MetaData->SetStringField(Pair.Key, Pair.Value);

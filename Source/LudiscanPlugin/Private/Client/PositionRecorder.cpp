@@ -44,9 +44,6 @@ void UPositionRecorder::CreateSession(
 	//
 	FString LevelName = Context->GetMapName();
 	TMap<FString, FString> extraData = TMap<FString, FString>();
-	extraData.Add("hello", "world");
-	extraData.Add("foo", "bar");
-	extraData.Add("baz", "qux");
 	Client.CreateSession(
 		NewProjectId,
 		SessionTitle,
