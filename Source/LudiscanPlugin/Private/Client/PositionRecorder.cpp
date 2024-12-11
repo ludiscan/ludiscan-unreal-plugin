@@ -77,6 +77,8 @@ void UPositionRecorder::FinishedSession()
 		int PlayerCount = WorldContext->GetNumPlayerControllers();
 		Async(EAsyncExecution::Thread, [this, PlayerCount, Data]()
 		{
+			const FString HostName = Client.GetSaveApiHostName("https://yuhi.tokyo");
+			Client.SetConfig(HostName);
 			Client.CreatePositionsPostSync(
 			PlaySessionCreate.ProjectId,
 			PlaySessionCreate.SessionId,
@@ -84,6 +86,7 @@ void UPositionRecorder::FinishedSession()
 			Data.Num(),
 			Data);
 			UE_LOG(LogTemp, Log, TEXT("Positions sent successfully."));
+			Client.SetConfig(HostName);
 			Client.FinishedSessionSync(
 				PlaySessionCreate.ProjectId,
 				PlaySessionCreate.SessionId);
