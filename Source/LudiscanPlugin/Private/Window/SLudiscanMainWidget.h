@@ -159,6 +159,7 @@ private:
 	void OnHostNameCommitted(const FText& Text, ETextCommit::Type Arg)
 	{
 		Hostname = Text.ToString();
+		LudiscanClient::SetSaveApiHostName(Hostname);
 	}
 
 	void OnHostNameChanged(const FText& Text)
