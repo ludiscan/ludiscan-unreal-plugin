@@ -194,10 +194,7 @@ public:
 			DeactivateHeatMap();
 		}
 		// タイマーが動作している場合はクリア
-		if (World && World->GetTimerManager().IsTimerActive(TaskPollingTimerHandle))
-		{
-			World->GetTimerManager().ClearTimer(TaskPollingTimerHandle);
-		}
+		ClearTimer();
 	}
 private:
 	FHeatMapTask SelectedTask = FHeatMapTask();
@@ -205,8 +202,7 @@ private:
 	FString HostName;
 	LudiscanClient Client = LudiscanClient();
 	TWeakObjectPtr<UHeatMapEdMode> EdMode;
-	FTimerHandle TaskPollingTimerHandle;
-	UWorld* World = GEditor->GetEditorWorldContext().World();
+	TWeakPtr<FActiveTimerHandle> ActiveTimerHandle;
 
 	TSharedPtr<SVerticalBox> VerticalBox;
 
@@ -214,6 +210,14 @@ private:
 
 	// ポーリング間隔（秒単位）
 	const float TaskPollingInterval = 1.5f;
+
+	void ClearTimer()
+	{
+		if (ActiveTimerHandle.IsValid())
+		{
+			UnRegisterActiveTimer(ActiveTimerHandle.Pin().ToSharedRef());
+		}
+	}
 
 	void SetTask(const FHeatMapTask& NewTask)
 	{
@@ -231,23 +235,27 @@ private:
 		{
 			SHeatMapDetailRef->SetIsLoading(true);
 		}
-		if (World)
-		{
-			World->GetTimerManager().ClearTimer(TaskPollingTimerHandle);
-		}
+		ClearTimer();
 
 		// 最初の getTask 呼び出し
-		if (World)
-		{
-			World->GetTimerManager().SetTimer(
-				TaskPollingTimerHandle,
-				FTimerDelegate::CreateSP(this, &SHeatMapWidget::PollGetTask),
-				TaskPollingInterval,
-				false
-			);
-		}
+		ActiveTimerHandle = RegisterActiveTimer(TaskPollingInterval, FWidgetActiveTimerDelegate::CreateSP(this, &SHeatMapWidget::HandleActiveTimer));
 		Invalidate(EInvalidateWidgetReason::Paint);
 	}
+	
+	EActiveTimerReturnType HandleActiveTimer(double InCurrentTime, float InDeltaTime)
+	{
+		// 定期的に行いたい処理を書く
+		// 処理後も定期的に呼ばれ続けたい場合は EActiveTimerReturnType::Continue を返す
+		// 一度きりで良ければ EActiveTimerReturnType::Stop を返す
+		if (SelectedTask.TaskId == FHeatMapTask().TaskId)
+		{
+			return EActiveTimerReturnType::Stop;
+		}
+		PollGetTask();
+
+		return EActiveTimerReturnType::Stop;
+	}
+
 
 	void PollGetTask()
 	{
@@ -268,6 +276,7 @@ private:
 				}
 				if (SelectedTask.Status == FHeatMapTask::Completed)
 				{
+					UE_LOG(LogTemp, Log, TEXT("Task completed"));
 					IsLoading = false;
 					if (SHeatMapDetailRef.IsValid())
 					{
@@ -275,10 +284,7 @@ private:
 					}
 					
 					// タイマーを停止
-					if (World)
-	                {
-	                    World->GetTimerManager().ClearTimer(TaskPollingTimerHandle);
-	                }
+					ClearTimer();
 					if (UEdMode* CustomGizmoMode = GLevelEditorModeTools().GetActiveScriptableMode(UHeatMapEdMode::EM_HeatMapEdMode))
 					{
 						EdMode = Cast<UHeatMapEdMode>(CustomGizmoMode);
@@ -296,30 +302,20 @@ private:
 					{
 						SHeatMapDetailRef->SetIsLoading(false);
 					}
-					if (World)
-					{
-						World->GetTimerManager().ClearTimer(TaskPollingTimerHandle);
-					}
+					ClearTimer();
 					UE_LOG(LogTemp, Error, TEXT("Failed to get task: タスクの取得に失敗しました"));
 					FText DialogText = FText::FromString("Failed to get task: タスクの取得に失敗しました");
 					FMessageDialog::Open(EAppMsgType::Ok, DialogText);
 				} else
 				{
+					UE_LOG(LogTemp, Log, TEXT("Task is processing"));
 					IsLoading = true;
 					if (SHeatMapDetailRef.IsValid())
 					{
 						SHeatMapDetailRef->SetIsLoading(true);
 					}
 					// タスクがまだ進行中の場合、次のポーリングをスケジュール
-					if (World)
-					{
-						World->GetTimerManager().SetTimer(
-							TaskPollingTimerHandle,
-							FTimerDelegate::CreateSP(this, &SHeatMapWidget::PollGetTask),
-							TaskPollingInterval,
-							false
-						);
-					}
+					ActiveTimerHandle = RegisterActiveTimer(TaskPollingInterval, FWidgetActiveTimerDelegate::CreateSP(this, &SHeatMapWidget::HandleActiveTimer));
 				}
 				Invalidate(EInvalidateWidgetReason::Paint);
 			},
@@ -329,10 +325,7 @@ private:
 					SHeatMapDetailRef->SetIsLoading(false);
 				}
 				// タイマーを停止
-				if (World)
-				{
-				   World->GetTimerManager().ClearTimer(TaskPollingTimerHandle);
-				}
+				ClearTimer();
 				UE_LOG(LogTemp, Error, TEXT("Failed to get task: %s"), *Message);
 				FText DialogText = FText::FromString(Message);
 				FMessageDialog::Open(EAppMsgType::Ok, DialogText);
