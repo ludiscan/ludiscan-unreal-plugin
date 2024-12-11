@@ -67,14 +67,17 @@ public:
 						.FillWidth(0.8f)
 						[
 							SNew(SSlider)
+							.MinValue(0.1f)
+							.MaxValue(10.0f)
 							.Value(this, &SHeatMapWidget::GetColorScaleFactor)
 							.OnValueChanged(this, &SHeatMapWidget::OnColorScaleFactorChanged)
 						]
 						+ SHorizontalBox::Slot()
 						.FillWidth(0.2f)
 						[
-							SNew(STextBlock)
+							SNew(SEditableTextBox)
 							.Text(this, &SHeatMapWidget::GetColorScaleFactorText)
+							.OnTextCommitted(this, &SHeatMapWidget::OnColorScaleFactorTextChanged)
 						]
 					]
 
@@ -155,12 +158,29 @@ public:
 					.AutoHeight()
 					.Padding(5)
 					[
-						SNew(SCheckBox)
-						.IsChecked(this, &SHeatMapWidget::GetDrawMinDensityCheckState)
-						.OnCheckStateChanged(this, &SHeatMapWidget::OnDrawMinDensityCheckStateChanged)
+						SNew(STextBlock)
+						.Text(FText::FromString("Draw Min Density"))
+					]
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(5)
+					[
+						SNew(SHorizontalBox)
+						+ SHorizontalBox::Slot()
+						.FillWidth(0.8f)
 						[
-							SNew(STextBlock)
-							.Text(FText::FromString("Draw Min Density"))
+							SNew(SSlider)
+							.MinValue(0.0f)
+							.MaxValue(1.0f)
+							.Value(this, &SHeatMapWidget::GetDrawMinDensity)
+							.OnValueChanged(this, &SHeatMapWidget::OnDrawMinDensityChanged)
+						]
+						+ SHorizontalBox::Slot()
+						.FillWidth(0.2f)
+						[
+							SNew(SEditableTextBox)
+							.Text(this, &SHeatMapWidget::GetDrawMinDensityText)
+							.OnTextChanged(this, &SHeatMapWidget::OnDrawMinDensityTextChanged)
 						]
 					]
 				]
@@ -178,6 +198,11 @@ public:
 		if (UEdMode* CustomGizmoMode = GLevelEditorModeTools().GetActiveScriptableMode(UHeatMapEdMode::EM_HeatMapEdMode))
 		{
 			EdMode = Cast<UHeatMapEdMode>(CustomGizmoMode);
+		}
+		if (EdMode.IsValid())
+		{
+			EdMode->SetHeatmapData(NewTask.HeatMapDataArray);
+			EdMode->RefreshDrawPositions();
 		}
 		SetTask(NewTask);
 	}
@@ -333,6 +358,16 @@ private:
 		);
 		Invalidate(EInvalidateWidgetReason::Paint);
 	}
+
+	void OnColorScaleFactorTextChanged(const FText& Text, ETextCommit::Type Arg)
+	{
+		if (FCString::IsNumeric(*Text.ToString()))
+		{
+			float Val = FCString::Atof(*Text.ToString());
+			EdMode->SetColorScaleFactor(FMath::Clamp(Val, 0.1f, 10.0f));
+			EdMode->RefreshDrawPositions();
+		}
+	}
 	
 	FText GetColorScaleFactorText() const
 	{
@@ -418,14 +453,29 @@ private:
 		EdMode->RefreshDrawPositions();
 	}
 
-	ECheckBoxState GetDrawMinDensityCheckState() const
+	float GetDrawMinDensity() const
 	{
-		return EdMode->IsDrawMinDensity() ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+		return EdMode->GetDrawMinDensity();
 	}
 
-	void OnDrawMinDensityCheckStateChanged(ECheckBoxState NewState) const
+	void OnDrawMinDensityChanged(float X) const
 	{
-		EdMode->SetDrawMinDensity(NewState == ECheckBoxState::Checked);
+		EdMode->SetDrawMinDensity(X);
 		EdMode->RefreshDrawPositions();
+	}
+
+	FText GetDrawMinDensityText() const
+	{
+		return FText::AsNumber(EdMode->GetDrawMinDensity());
+	}
+	
+	void OnDrawMinDensityTextChanged(const FText& Text)
+	{
+		if (FCString::IsNumeric(*Text.ToString()))
+		{
+			float Val = FCString::Atof(*Text.ToString());
+			EdMode->SetDrawMinDensity(FMath::Clamp(Val, 0.0f, 1.0f));
+			EdMode->RefreshDrawPositions();
+		}
 	}
 };

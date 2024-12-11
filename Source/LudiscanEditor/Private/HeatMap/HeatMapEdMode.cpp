@@ -132,73 +132,118 @@ void UHeatMapEdMode::CalculateBoundingBox()
 void UHeatMapEdMode::GenerateDrawPositions()
 {
 	if (HeatmapArray.Num() == 0)
-	{
-		return;
-	}
-	DrawPositions.Empty();
-	const float StepSize = DrawStepSize;
-	const FVector BoxSize = BoundingBox.Max - BoundingBox.Min;
-	if (BoxSize.X <= 0.0f || BoxSize.Y <= 0.0f || BoxSize.Z <= 0.0f)
-	{
-		return;
-	}
-	const int32 StepsX = FMath::CeilToInt(BoxSize.X / StepSize);
-	const int32 StepsY = FMath::CeilToInt(BoxSize.Y / StepSize);
-	const int32 StepsZ = FMath::CeilToInt(BoxSize.Z / StepSize);
+    {
+        return;
+    }
+    DrawPositions.Empty();
 
-	const float DensityScaleFactor = FMath::Loge(MaxDensityValue + 1.0f) - FMath::Loge(MinDensityValue);
-	if (DensityScaleFactor <= 0.0f)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("DensityScaleFactor is non-positive. Skipping GenerateDrawPositions."));
-		return;
-	}
+    const float StepSize = DrawStepSize;
+    const FVector BoxSize = BoundingBox.Max - BoundingBox.Min;
+    if (BoxSize.X <= 0.0f || BoxSize.Y <= 0.0f || BoxSize.Z <= 0.0f)
+    {
+        return;
+    }
 
-	for (int32 X = 0; X <= StepsX; ++X)
-	{
-		for (int32 Y = 0; Y <= StepsY; ++Y)
-		{
-			for (int32 Z = 0; Z <= StepsZ; ++Z)
-			{
-				if (!DrawZAxis && Z != 0)
-				{
-					continue;
-				}
+    const int32 StepsX = FMath::CeilToInt(BoxSize.X / StepSize);
+    const int32 StepsY = FMath::CeilToInt(BoxSize.Y / StepSize);
+    const int32 StepsZ = FMath::CeilToInt(BoxSize.Z / StepSize);
 
-				FVector Position = BoundingBox.Min + FVector(X * StepSize + StepSize / 2, Y * StepSize + StepSize / 2, Z * StepSize / 2);
-				float MinDistance = FLT_MAX;
-				float ClosestDensity = 0.0f;
+    // 全セルの密度を先に計算して、Min/Maxを取るための配列を用意
+    TArray<float> CellDensities;
+    CellDensities.SetNum((StepsX+1)*(StepsY+1)*(StepsZ+1));
+    // 初期化
+    for (float &DensityVal : CellDensities)
+    {
+        DensityVal = 0.0f;
+    }
 
-				for (const FHeatmapData& Data : HeatmapArray)
-				{
-					float Distance = FVector::Dist(Position, FVector(Data.X, Data.Y, DrawZAxis ? Data.Z : 0.0f));
-					if (Distance < MinDistance)
-					{
-						MinDistance = Distance;
-						ClosestDensity = Data.Density;
-					}
-				}
+    // 各セルに対応するインデックス取得用
+    auto GetCellIndex = [&](int32 X, int32 Y, int32 Z)
+    {
+        return X + (StepsX+1)*Y + (StepsX+1)*(StepsY+1)*Z;
+    };
 
-				if (!DrawMinDensity && ClosestDensity <= MinDensityValue)
-				{
-					continue;
-				}
+    // 各セルの密度計算
+    for (int32 X = 0; X <= StepsX; ++X)
+    {
+        for (int32 Y = 0; Y <= StepsY; ++Y)
+        {
+            for (int32 Z = 0; Z <= StepsZ; ++Z)
+            {
+                if (!DrawZAxis && Z != 0) continue;
 
-				// 対数スケールと色強調度で色を計算
-				float NormalizedDensity = FMath::Loge(ClosestDensity + 1.0f) / DensityScaleFactor;
-				NormalizedDensity = FMath::Clamp(NormalizedDensity * ColorScaleFactor, 0.0f, 1.0f); // 強調度を適用し、範囲を0～1に制限
-				FColor Color = FColor::MakeRedToGreenColorFromScalar(NormalizedDensity);
-				Color.A = FMath::Clamp(static_cast<int32>(NormalizedDensity * 255), 0, 255);
-				if (Color.A < 20)
-				{
-					Color.A = 0;
-				}
+                FVector CellMin = BoundingBox.Min + FVector(X * StepSize, Y * StepSize, Z * StepSize);
+                FVector CellMax = CellMin + FVector(StepSize, StepSize, StepSize);
 
-				Position.Z += DrawZOffset;
+                float CellDensityCount = 0.0f;
+                for (const FHeatmapData& Data : HeatmapArray)
+                {
+                    if (Data.X >= CellMin.X && Data.X < CellMax.X &&
+                        Data.Y >= CellMin.Y && Data.Y < CellMax.Y &&
+                        (DrawZAxis ? (Data.Z >= CellMin.Z && Data.Z < CellMax.Z) : true))
+                    {
+                        // このデータ点はこのセルの範囲内
+                        // Data.Densityが記録回数なら+1、値がもうあるならそれを加算
+                        CellDensityCount += Data.Density; 
+                    }
+                }
 
-				// 描画データに追加
-				DrawPositions.Add({Position, Color});
-			}
-		}
-	}
+                CellDensities[GetCellIndex(X,Y,Z)] = CellDensityCount;
+            }
+        }
+    }
+
+    // Min/Max再計算
+    float LocalMinDensity = FLT_MAX;
+    float LocalMaxDensity = 0.0f;
+    for (float CellVal : CellDensities)
+    {
+        if (CellVal < LocalMinDensity && CellVal > 0.0f)
+        {
+            LocalMinDensity = CellVal;
+        }
+        if (CellVal > LocalMaxDensity)
+        {
+            LocalMaxDensity = CellVal;
+        }
+    }
+
+    // Min/Maxを反映
+    MinDensityValue = LocalMinDensity == FLT_MAX ? 0.0f : LocalMinDensity;
+    MaxDensityValue = LocalMaxDensity;
+
+    // 色付けとDrawPositions生成
+    float LogMin = FMath::Loge(MinDensityValue + 1.0f);
+    float LogMax = FMath::Loge(MaxDensityValue + 1.0f);
+    float Denominator = LogMax - LogMin;
+    if (Denominator < KINDA_SMALL_NUMBER)
+    {
+        Denominator = KINDA_SMALL_NUMBER; 
+    }
+
+    for (int32 X = 0; X <= StepsX; ++X)
+    {
+        for (int32 Y = 0; Y <= StepsY; ++Y)
+        {
+            for (int32 Z = 0; Z <= StepsZ; ++Z)
+            {
+                if (!DrawZAxis && Z != 0) continue;
+
+                float CellVal = CellDensities[GetCellIndex(X,Y,Z)];
+
+                // 正規化
+                float LogD = FMath::Loge(CellVal + 1.0f);
+                float NormalizedDensity = (LogD - LogMin) / Denominator;
+                NormalizedDensity = FMath::Clamp(NormalizedDensity * ColorScaleFactor, 0.0f, 1.0f);
+            	if (NormalizedDensity < DrawMinDensity) continue;
+            	
+                FVector Position = BoundingBox.Min + FVector(X * StepSize, Y * StepSize, Z * StepSize);
+                Position.Z += DrawZOffset;
+                FColor Color = FColor::MakeRedToGreenColorFromScalar(NormalizedDensity);
+
+                DrawPositions.Add({Position, Color});
+            }
+        }
+    }
 }
 #undef LOCTEXT_NAMESPACE

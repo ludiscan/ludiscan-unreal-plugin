@@ -80,14 +80,14 @@ public:
 		DrawZOffset = NewValue;
 	}
 
-	bool IsDrawMinDensity() const
+	float GetDrawMinDensity() const
 	{
 		return DrawMinDensity;
 	}
 
-	void SetDrawMinDensity(bool bNewValue)
+	void SetDrawMinDensity(float NewValue)
 	{
-		DrawMinDensity = bNewValue;
+		DrawMinDensity = NewValue;
 	}
 
 	virtual bool UsesToolkits() const override;
@@ -108,7 +108,7 @@ private:
 	int DrawZOffset = 0;
 
 	UPROPERTY(EditAnywhere, Category = Options)
-	bool DrawMinDensity = true;
+	float DrawMinDensity = 0.0f;
 
 	UPROPERTY(EditAnywhere, Category = Options)
 	FBox BoundingBox;
