@@ -413,9 +413,9 @@ private:
 							// find metadata
 							if (PlaySession->MetaData.Num() > 0)
 							{
-								for (const TPair<FString, FString>& MetaData : PlaySession->MetaData)
+								for (const TPair<FString, FString>& Pair : PlaySession->MetaData)
 								{
-									if (MetaData.Key.ToLower() == KeyValue[0].ToLower() && MetaData.Value == KeyValue[1].ToLower())
+									if (Pair.Key.ToLower() == KeyValue[0].ToLower() && Pair.Value == KeyValue[1].ToLower())
 									{
 										FilteredSessionItems.Add(PlaySession);
 									}
