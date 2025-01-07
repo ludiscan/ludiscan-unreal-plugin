@@ -195,6 +195,7 @@ public:
 	void Reload(const FString& Name, const FHeatMapTask& NewTask)
 	{
 		HostName = Name;
+		Client.SetConfig(HostName);
 		if (UEdMode* CustomGizmoMode = GLevelEditorModeTools().GetActiveScriptableMode(UHeatMapEdMode::EM_HeatMapEdMode))
 		{
 			EdMode = Cast<UHeatMapEdMode>(CustomGizmoMode);
