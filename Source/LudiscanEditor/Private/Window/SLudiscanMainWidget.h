@@ -160,6 +160,7 @@ private:
 	{
 		Hostname = Text.ToString();
 		LudiscanClient::SetSaveApiHostName(Hostname);
+		Client.SetConfig(Hostname);
 	}
 
 	void OnHostNameChanged(const FText& Text)
@@ -170,6 +171,7 @@ private:
 	FReply OnReloadButtonClicked()
 	{
 		LudiscanClient::SetSaveApiHostName(Hostname);
+		Client.SetConfig(Hostname);
 		if (WidgetSwitcher.IsValid())
 		{
 			TSharedPtr<SWidget> ActiveWidget = WidgetSwitcher->GetActiveWidget();

@@ -74,14 +74,17 @@ struct FHeatMapTask
 			return false;
 		}
 		FPlaySession Session;
-		TSharedPtr<FJsonObject> SessionJsonObject = JsonObject->GetObjectField(TEXT("session"));
-		if (FPlaySession::ParseDataFromJson(SessionJsonObject.ToSharedRef(), Session))
+		const TSharedPtr<FJsonObject>* SessionString;
+		if (JsonObject->TryGetObjectField(TEXT("session"), SessionString))
 		{
-			OutData.Session = Session;
-		}
-		else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("No session data"));
+			if (FPlaySession::ParseDataFromJson(SessionString->ToSharedRef(), Session))
+			{
+				OutData.Session = Session;
+			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("No session data"));
+			}
 		}
 		JsonObject->TryGetNumberField(TEXT("stepSize"), OutData.StepSize);
 		JsonObject->TryGetBoolField(TEXT("zVisible"), OutData.ZVisible);
