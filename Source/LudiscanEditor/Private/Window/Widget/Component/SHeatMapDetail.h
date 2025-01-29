@@ -181,9 +181,7 @@ private:
 		            [
 		                SNew(STextBlock)
 		                .Text_Lambda([this]() -> FText {
-		                    return FText::FromString(!Session.StartTime.IsEmpty()
-		                        ? FString::Printf(TEXT("Start Time: %s"), *Session.StartTime)
-		                        : FString(TEXT("Start Time: Unknown")));
+		                    return FText::FromString(Session.StartTime.ToString());
 		                })
 		                .TextStyle(FAppStyle::Get(), "NormalText")
 		            ]
@@ -194,9 +192,7 @@ private:
 		            [
 		                SNew(STextBlock)
 		                .Text_Lambda([this]() -> FText {
-		                    return FText::FromString(!Session.EndTime.IsEmpty()
-		                        ? FString::Printf(TEXT("End Time: %s"), *Session.EndTime)
-		                        : FString(TEXT("End Time: Unknown")));
+		                    return FText::FromString(Session.EndTime.ToString());
 		                })
 		                .TextStyle(FAppStyle::Get(), "NormalText")
 		            ]
@@ -241,7 +237,7 @@ private:
 	    ];
 	}
 
-	TSharedRef<SBorder> ProjectDetail()
+	TSharedRef<SBorder> ProjectDetail() const
 	{
 		return SNew(SBorder)
 		.BorderBackgroundColor(FLinearColor(0.2f, 0.2f, 0.2f, 1.0f)) // 背景色
@@ -302,9 +298,7 @@ private:
 		                SNew(STextBlock)
 		                .Text_Lambda([this]() -> FText
 		                {
-			                return FText::FromString(!Project.CreatedAt.IsEmpty()
-								? FString::Printf(TEXT("Created At: %s"), *Project.CreatedAt)
-								: FString(TEXT("Created At: Unknown")));
+			                return FText::FromString(Project.CreatedAt.ToString());
 		                })
 			        ]
 		        ]

@@ -26,6 +26,7 @@ public class LudiscanPlugin : ModuleRules
 			new string[]
 			{
 				"Core", "HTTP", "Json", "JsonUtilities", "RHI", "RenderCore", "Slate", "SlateCore",
+				"OpenAPI", "LudiscanPlugin",
 				// ... add other public dependencies that you statically link with here ...
 			}
 		);
@@ -43,6 +44,7 @@ public class LudiscanPlugin : ModuleRules
 				"SlateCore",
 				"Core", "HTTP", "Json", "JsonUtilities", "RHI", "RenderCore",
 				"CoreUObject",
+				"OpenAPI",
 				// ... add private dependencies that you statically link with here ...	
 			}
 		);

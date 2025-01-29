@@ -29,7 +29,7 @@ public:
 	void StartSession(
 		UObject* WorldContextObject)
 	{
-		const int ProjectId = LudiscanClient::GetSaveProjectId(1);
+		const int ProjectId = LudiscanAPI::LudiscanClient::GetSaveProjectId(1);
 		CreateSession(
 		WorldContextObject->GetWorld(),
 			ProjectId,
@@ -74,7 +74,7 @@ public:
 		TFunction<void()> OnSuccess = []() {}
 	);
 
-	const TArray<TArray<FPlayerPosition>>& GetPositionData() const;
+	const TArray<TArray<LudiscanAPI::FPlayerPosition>>& GetPositionData() const;
 
 	UFUNCTION(BlueprintCallable, Category = "Ludiscan|Session")
 	void AddMetaData(
@@ -85,14 +85,14 @@ public:
 	}
 
 private:
-	TArray<TArray<FPlayerPosition>> PositionData;
+	TArray<TArray<LudiscanAPI::FPlayerPosition>> PositionData;
 	FTimerHandle TimerHandle;
 	uint64 StartTime;
 
 	UPROPERTY()
 	UWorld* WorldContext;
 
-	LudiscanClient Client;
+	LudiscanAPI::LudiscanClient Client = LudiscanAPI::LudiscanClient();
 
 	// 実行中のsession
 	FPlaySession PlaySessionCreate;

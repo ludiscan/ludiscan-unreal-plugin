@@ -1,6 +1,7 @@
 #pragma once
+#include "OpenAPIPlaySessionResponseDto.h"
 
-struct FPlaySession
+struct LUDISCANPLUGIN_API FPlaySession
 {
 
 	int32 SessionId;
@@ -17,80 +18,38 @@ struct FPlaySession
 
 	TMap<FString, FString> MetaData;
 
-	FString StartTime;
+	FDateTime StartTime;
 
-	FString EndTime;
+	FDateTime EndTime;
 
-	bool bIsPlaying;
+	bool IsPlaying;
 	// JSONの自動変換を可能にするために必要
 	FPlaySession()
-		: SessionId(0), ProjectId(0), bIsPlaying(false)
+		: SessionId(0), ProjectId(0), IsPlaying(false)
 	{}
 
-	// JSON オブジェクトから単一のデータをパースするメソッド
-	static bool ParseDataFromJson(const TSharedPtr<FJsonObject>& JsonObject, FPlaySession& OutData)
+	static FPlaySession ParseFromOpenAPIPlaySessionResponseDto(const OpenAPI::OpenAPIPlaySessionResponseDto& Response)
 	{
-		if (!JsonObject.IsValid())
+		FPlaySession PlaySession;
+		PlaySession.SessionId = Response.SessionId;
+		PlaySession.ProjectId = Response.ProjectId;
+		PlaySession.Name = Response.Name;
+		PlaySession.DeviceId = Response.DeviceId ? Response.DeviceId.GetValue() : "";
+		PlaySession.Platform = Response.Platform ? Response.Platform.GetValue() : "";
+		PlaySession.AppVersion = Response.AppVersion ? Response.AppVersion.GetValue() : "";
+		TSharedPtr<FJsonObject> MetaData = Response.MetaData ? Response.MetaData.GetValue() : nullptr;
+		if (MetaData.IsValid())
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Invalid JsonObject"));
-			return false;
-		}
-
-		// 各フィールドをパース
-		OutData.SessionId = JsonObject->GetIntegerField(TEXT("sessionId"));
-		OutData.ProjectId = JsonObject->GetIntegerField(TEXT("projectId"));
-		JsonObject->TryGetStringField(TEXT("name"), OutData.Name);
-		JsonObject->TryGetStringField(TEXT("deviceId"), OutData.DeviceId);
-		JsonObject->TryGetStringField(TEXT("platform"), OutData.Platform);
-		JsonObject->TryGetStringField(TEXT("appVersion"), OutData.AppVersion);
-
-		// MetaData を TMap<FString, FString> に変換
-		const TSharedPtr<FJsonObject>* MetaDataObject;
-		if (JsonObject->TryGetObjectField(TEXT("metaData"), MetaDataObject))
-		{
-			if (MetaDataObject->IsValid())
+			PlaySession.MetaData = TMap<FString, FString>();
+			for (const auto& Pair : MetaData->Values)
 			{
-				for (const auto& Pair : MetaDataObject->Get()->Values)
-				{
-					OutData.MetaData.Add(Pair.Key, Pair.Value->AsString());
-				}
+				PlaySession.MetaData.Add(Pair.Key, Pair.Value->AsString());
 			}
 		}
-		JsonObject->TryGetStringField(TEXT("startTime"), OutData.StartTime);
-		JsonObject->TryGetStringField(TEXT("endTime"), OutData.EndTime);
-		JsonObject->TryGetBoolField(TEXT("isPlaying"), OutData.bIsPlaying);
-
-		return true;
-	}
-
-	// JSON 配列から複数のデータをパースするメソッド
-	static bool ParseArrayFromJson(const FString& JsonString, TArray<FPlaySession>& OutArray)
-	{
-		TArray<TSharedPtr<FJsonValue>> JsonArray;
-		TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(JsonString);
-
-		if (FJsonSerializer::Deserialize(Reader, JsonArray))
-		{
-			for (const TSharedPtr<FJsonValue>& JsonValue : JsonArray)
-			{
-				FPlaySession Data;
-				if (ParseDataFromJson(JsonValue->AsObject(), Data))
-				{
-					OutArray.Add(Data);
-				}
-				else
-				{
-					UE_LOG(LogTemp, Warning, TEXT("Failed to parse JSON object"));
-					return false;
-				}
-			}
-			return true;
-		}
-		else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Failed to parse JSON array"));
-			return false;
-		}
+		PlaySession.StartTime = Response.StartTime;
+		PlaySession.EndTime = Response.EndTime ? Response.EndTime.GetValue() : FDateTime();
+		PlaySession.IsPlaying = Response.IsPlaying;
+		return PlaySession;
 	}
 
 	void Log()
@@ -106,8 +65,8 @@ struct FPlaySession
 		{
 			UE_LOG(LogTemp, Log, TEXT("Key: %s, Value: %s"), *Pair.Key, *Pair.Value);
 		}
-		UE_LOG(LogTemp, Log, TEXT("StartTime: %s"), *StartTime);
-		UE_LOG(LogTemp, Log, TEXT("EndTime: %s"), *EndTime);
-		UE_LOG(LogTemp, Log, TEXT("bIsPlaying: %d"), bIsPlaying);
+		UE_LOG(LogTemp, Log, TEXT("StartTime: %s"), *StartTime.ToString());
+		UE_LOG(LogTemp, Log, TEXT("EndTime: %s"), *EndTime.ToString());
+		UE_LOG(LogTemp, Log, TEXT("bIsPlaying: %d"), IsPlaying);
 	}
 };

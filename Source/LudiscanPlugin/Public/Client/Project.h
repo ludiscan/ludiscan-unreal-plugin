@@ -1,6 +1,6 @@
 #pragma once
 
-#include "JsonObjectConverter.h"
+#include "OpenAPIProjectResponseDto.h"
 
 struct FProject
 {
@@ -10,60 +10,20 @@ struct FProject
 
 	FString Description;
 
-	FString CreatedAt;
+	FDateTime CreatedAt;
 
-	FProject(): Id(0), Name(""), Description(""), CreatedAt("")
+	FProject(): Id(0), Name(""), Description(""), CreatedAt(FDateTime())
 	{
 	}
 
-	static bool ParseObjectFromJson(const TSharedPtr<FJsonObject>& JsonObject, FProject& OutData)
+	static FProject ParseFromOpenAPIProjectResponseDto(const OpenAPI::OpenAPIProjectResponseDto& Response)
 	{
-		if (JsonObject.IsValid())
-		{
-			OutData.Id = JsonObject->GetIntegerField(TEXT("id"));
-			OutData.Name = JsonObject->GetStringField(TEXT("name"));
-			OutData.Description = JsonObject->GetStringField(TEXT("description"));
-			OutData.CreatedAt = JsonObject->GetStringField(TEXT("createdAt"));
-			return true;
-		}
-		else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Invalid JsonObject"));
-			return false;
-		}
-	}
-
-	static bool ParseArrayFromJson(const FString& JsonString, TArray<FProject>& OutArray)
-	{
-		TArray<TSharedPtr<FJsonValue>> JsonArray;
-		TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(JsonString);
-
-		if (FJsonSerializer::Deserialize(Reader, JsonArray))
-		{
-			for (const TSharedPtr<FJsonValue>& JsonValue : JsonArray)
-			{
-				TSharedPtr<FJsonObject> JsonObject = JsonValue->AsObject();
-				if (JsonObject.IsValid())
-				{
-					FProject Item;
-					if (ParseObjectFromJson(JsonObject.ToSharedRef(), Item))
-					{
-						OutArray.Add(Item);
-					}
-					else
-					{
-						UE_LOG(LogTemp, Warning, TEXT("Failed to parse JSON object"));
-						return false;
-					}
-				}
-			}
-			return true;
-		}
-		else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Failed to parse JSON array"));
-			return false;
-		}
+		FProject Project;
+		Project.Id = Response.Id;
+		Project.Name = Response.Name;
+		Project.Description = Response.Description;
+		Project.CreatedAt = Response.CreatedAt;
+		return Project;
 	}
 
 	void Log()
@@ -71,6 +31,6 @@ struct FProject
 		UE_LOG(LogTemp, Log, TEXT("Id: %d"), Id);
 		UE_LOG(LogTemp, Log, TEXT("Name: %s"), *Name);
 		UE_LOG(LogTemp, Log, TEXT("Description: %s"), *Description);
-		UE_LOG(LogTemp, Log, TEXT("CreatedAt: %s"), *CreatedAt);
+		UE_LOG(LogTemp, Log, TEXT("CreatedAt: %s"), *CreatedAt.ToString());
 	}
 };

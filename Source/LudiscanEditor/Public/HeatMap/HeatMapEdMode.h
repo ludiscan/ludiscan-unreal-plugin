@@ -42,7 +42,7 @@ public:
 	void SetColorScaleFactor(float NewValue)
 	{
 		ColorScaleFactor = NewValue;
-		LudiscanClient::SetSaveHeatmapColorScaleFilter(NewValue);
+		LudiscanAPI::LudiscanClient::SetSaveHeatmapColorScaleFilter(NewValue);
 	}
 	void RefreshDrawPositions()
 	{
@@ -56,7 +56,7 @@ public:
 	void SetDrawZAxis(bool bNewValue)
 	{
 		DrawZAxis = bNewValue;
-		LudiscanClient::SetSaveHeatmapDrawZAxis(bNewValue);
+		LudiscanAPI::LudiscanClient::SetSaveHeatmapDrawZAxis(bNewValue);
 	}
 
 	int GetDrawStepSize() const
@@ -67,7 +67,7 @@ public:
 	void SetDrawStepSize(int NewValue)
 	{
 		DrawStepSize = NewValue;
-		LudiscanClient::SetSaveHeatmapDrawStepSize(NewValue);
+		LudiscanAPI::LudiscanClient::SetSaveHeatmapDrawStepSize(NewValue);
 	}
 
 	int GetDrawZOffset() const

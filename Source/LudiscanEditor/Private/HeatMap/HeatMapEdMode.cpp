@@ -45,11 +45,11 @@ void UHeatMapEdMode::Enter()
 	// 必要に応じて初期化コードを追加
 	// ツールの登録
 	RegisterTools();
-	float SavedColorScaleFilter = LudiscanClient::GetSaveHeatmapColorScaleFilter(1.0f);
+	float SavedColorScaleFilter = LudiscanAPI::LudiscanClient::GetSaveHeatmapColorScaleFilter(1.0f);
 	ColorScaleFactor = SavedColorScaleFilter;
-	bool SavedDrawZAxis = LudiscanClient::GetSaveHeatmapDrawZAxis(false);
+	bool SavedDrawZAxis = LudiscanAPI::LudiscanClient::GetSaveHeatmapDrawZAxis(false);
 	DrawZAxis = SavedDrawZAxis;
-	int SavedStepSize = LudiscanClient::GetSaveHeatmapDrawStepSize(100);
+	int SavedStepSize = LudiscanAPI::LudiscanClient::GetSaveHeatmapDrawStepSize(100);
 	DrawStepSize = SavedStepSize;
 }
 

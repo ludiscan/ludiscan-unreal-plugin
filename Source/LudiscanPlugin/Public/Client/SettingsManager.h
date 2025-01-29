@@ -1,6 +1,6 @@
 #pragma once
 
-class FSettingsManager
+class LUDISCANPLUGIN_API FSettingsManager
 {
 public:
 	static void SetFloat(const FString& Key, float Value)

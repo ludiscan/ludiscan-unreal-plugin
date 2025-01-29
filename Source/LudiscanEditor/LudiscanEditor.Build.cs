@@ -5,11 +5,27 @@ public class LudiscanEditor : ModuleRules
     public LudiscanEditor(ReadOnlyTargetRules Target) : base(Target)
     {
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
+        
+        PublicIncludePaths.AddRange(
+            new string[] {
+                // ... add public include paths required here ...
+                "LudiscanPlugin",
+                "OpenAPI",
+            }
+        );
+        
+        PrivateIncludePaths.AddRange(
+            new string[] {
+                "LudiscanPlugin",
+                "OpenAPI",
+            }    
+        );
 
         PublicDependencyModuleNames.AddRange(
             new string[]
             {
                 "Core", "LudiscanPlugin",
+                "OpenAPI",
             }
         );
 
@@ -20,6 +36,7 @@ public class LudiscanEditor : ModuleRules
                 "Engine",
                 "Slate",
                 "SlateCore",
+                "ToolWidgets",
                 "LudiscanPlugin",
                 "UnrealEd",
                 "Projects",
@@ -33,6 +50,8 @@ public class LudiscanEditor : ModuleRules
                 "LevelEditor",
                 "InteractiveToolsFramework",
                 "EditorInteractiveToolsFramework",
+                "OpenAPI",
+                "LudiscanPlugin",
             }
         );
     }

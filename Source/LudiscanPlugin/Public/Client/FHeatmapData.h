@@ -1,6 +1,7 @@
 #pragma once
+#include "OpenAPIHeatMapTaskResultListItem.h"
 
-struct FHeatmapData
+struct LUDISCANPLUGIN_API FHeatmapData
 {
 	
 	float X;
@@ -15,34 +16,13 @@ struct FHeatmapData
 	{
 	}
 
-	static bool ParseArrayFromJson(const TArray<TSharedPtr<FJsonValue>>* JsonString, TArray<FHeatmapData>& OutArray)
+	static FHeatmapData ParseFromOpenAPIHeatMapTaskResultListItem(const OpenAPI::OpenAPIHeatMapTaskResultListItem& Item)
 	{
-		if (JsonString == nullptr)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Invalid JsonString"));
-			return false;
-		}
-
-		for (const TSharedPtr<FJsonValue>& JsonValue : *JsonString)
-		{
-			TSharedPtr<FJsonObject> JsonObject = JsonValue->AsObject();
-			if (JsonObject.IsValid())
-			{
-				FHeatmapData Item;
-				if (JsonObject->TryGetNumberField(TEXT("x"), Item.X) &&
-					JsonObject->TryGetNumberField(TEXT("y"), Item.Y) &&
-					JsonObject->TryGetNumberField(TEXT("z"), Item.Z) &&
-					JsonObject->TryGetNumberField(TEXT("density"), Item.Density))
-				{
-					OutArray.Add(Item);
-				}
-				else
-				{
-					UE_LOG(LogTemp, Warning, TEXT("Failed to parse JSON object"));
-					return false;
-				}
-			}
-		}
-		return true;
+		FHeatmapData Data;
+		Data.X = Item.X;
+		Data.Y = Item.Y;
+		Data.Z = Item.Z ? Item.Z.GetValue() : 0;
+		Data.Density = Item.Density;
+		return Data;
 	}
 };

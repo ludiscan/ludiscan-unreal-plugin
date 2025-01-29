@@ -5,9 +5,10 @@
 
 #include "Client/LudiscanClient.h"
 
+using namespace LudiscanAPI;
+
 UPositionRecorder::UPositionRecorder(): StartTime(0), WorldContext(nullptr)
 {
-	Client = LudiscanClient();
 	FString HostName = LudiscanClient::GetSaveApiHostName("https://yuhi.tokyo");
 	Client.SetConfig(HostName);
 	IsInSession = false;
@@ -100,7 +101,7 @@ void UPositionRecorder::UploadPositions()
 
 void UPositionRecorder::FinishedSession()
 {
-	if (PlaySessionCreate.bIsPlaying && PlaySessionCreate.SessionId != 0 && IsInSession)
+	if (PlaySessionCreate.IsPlaying && PlaySessionCreate.SessionId != 0 && IsInSession)
 	{
 		Async(EAsyncExecution::Thread, [this]()
 		{

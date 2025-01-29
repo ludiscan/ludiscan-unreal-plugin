@@ -4,7 +4,7 @@
 
 #define LOCTEXT_NAMESPACE "FLudiscanPluginModule"
 
-
+DEFINE_LOG_CATEGORY(LogLudiscanAPI);
 
 
 void FLudiscanPluginModule::StartupModule()

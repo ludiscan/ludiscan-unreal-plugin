@@ -5,7 +5,7 @@
 #include "HeatMap/HeatMapEdMode.h"
 #include "Widgets/Input/SSlider.h"
 
-class SHeatMapWidget: public SCompoundWidget
+class LUDISCANEDITOR_API SHeatMapWidget: public SCompoundWidget
 {
 public:
 	SLATE_BEGIN_ARGS(SHeatMapWidget) {}
@@ -226,7 +226,7 @@ private:
 	FHeatMapTask SelectedTask = FHeatMapTask();
 	TSharedPtr<SHeatMapDetail> SHeatMapDetailRef;
 	FString HostName;
-	LudiscanClient Client = LudiscanClient();
+	LudiscanAPI::LudiscanClient Client = LudiscanAPI::LudiscanClient();
 	TWeakObjectPtr<UHeatMapEdMode> EdMode;
 	TWeakPtr<FActiveTimerHandle> ActiveTimerHandle;
 
@@ -235,7 +235,7 @@ private:
 	bool IsLoading;
 
 	// ポーリング間隔（秒単位）
-	const float TaskPollingInterval = 1.5f;
+	const float TaskPollingInterval = 1.0f;
 
 	void ClearTimer()
 	{

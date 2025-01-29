@@ -1,10 +1,12 @@
 #pragma once
 #include "FHeatmapData.h"
 #include "FPlaySession.h"
+#include "OpenAPIHeatmapTaskDto.h"
 #include "Project.h"
 
+using OpenAPI::OpenAPIHeatmapTaskDto;
 
-struct FHeatMapTask
+struct LUDISCANPLUGIN_API FHeatMapTask
 {
 	enum ETaskStatus
 	{
@@ -27,111 +29,39 @@ struct FHeatMapTask
 
 	TArray<FHeatmapData> HeatMapDataArray;
 
-	FString CreateAt;
+	FDateTime CreateAt;
 
-	FString UpdateAt;
+	FDateTime UpdateAt;
 
 	FHeatMapTask()
 		: TaskId(0)
 		  , Project(FProject())
 		  , StepSize(0)
 		  , ZVisible(false)
-		  , Status(ETaskStatus::Pending), HeatMapDataArray()
+		  , Status(Pending), HeatMapDataArray()
 	{
 	}
 
-	static bool ParseDataFromJson(const FString& JsonString, FHeatMapTask& OutData)
+	static FHeatMapTask ParseFromOpenAPIHeatmapTaskDto(const OpenAPIHeatmapTaskDto& Dto)
 	{
-		if (JsonString.IsEmpty())
+		FHeatMapTask Task;
+		Task.TaskId = Dto.TaskId;
+		Task.Project = FProject::ParseFromOpenAPIProjectResponseDto(Dto.Project);
+		Task.Session = Dto.Session ? FPlaySession::ParseFromOpenAPIPlaySessionResponseDto(Dto.Session.GetValue()) : FPlaySession();
+		Task.StepSize = Dto.StepSize;
+		Task.ZVisible = Dto.ZVisible;
+		Task.HeatMapDataArray = TArray<FHeatmapData>();
+		for (const OpenAPI::OpenAPIHeatMapTaskResultListItem& Item : Dto.Result.GetValue())
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Empty JsonString"));
-			return false;
+			Task.HeatMapDataArray.Add(FHeatmapData::ParseFromOpenAPIHeatMapTaskResultListItem(Item));
 		}
-		UE_LOG(LogTemp, Log, TEXT("JsonString: %s"), *JsonString);
-		TSharedPtr<FJsonObject> JsonObject;
-		TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(JsonString);
-		if (!FJsonSerializer::Deserialize(Reader, JsonObject))
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Failed to deserialize JSON"));
-			return false;
-		}
-		if (!JsonObject.IsValid())
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Invalid JsonObject"));
-			return false;
-		}
-
-		OutData.TaskId = JsonObject->GetIntegerField(TEXT("taskId"));
-		FProject Project;
-		TSharedPtr<FJsonObject> ProjectJsonObject = JsonObject->GetObjectField(TEXT("project"));
-		if (FProject::ParseObjectFromJson(ProjectJsonObject.ToSharedRef(), Project))
-		{
-			OutData.Project = Project;
-		}
-		else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Failed to convert JsonObject to FProject"));
-			return false;
-		}
-		FPlaySession Session;
-		const TSharedPtr<FJsonObject>* SessionString;
-		if (JsonObject->TryGetObjectField(TEXT("session"), SessionString))
-		{
-			if (FPlaySession::ParseDataFromJson(SessionString->ToSharedRef(), Session))
-			{
-				OutData.Session = Session;
-			}
-			else
-			{
-				UE_LOG(LogTemp, Warning, TEXT("No session data"));
-			}
-		}
-		JsonObject->TryGetNumberField(TEXT("stepSize"), OutData.StepSize);
-		JsonObject->TryGetBoolField(TEXT("zVisible"), OutData.ZVisible);
-		FString StatusString;
-		if (JsonObject->TryGetStringField(TEXT("status"), StatusString))
-		{
-			if (StatusString == TEXT("pending"))
-			{
-				OutData.Status = ETaskStatus::Pending;
-			}
-			else if (StatusString == TEXT("processing"))
-			{
-				OutData.Status = ETaskStatus::Processing;
-			}
-			else if (StatusString == TEXT("completed"))
-			{
-				OutData.Status = ETaskStatus::Completed;
-			}
-			else if (StatusString == TEXT("failed"))
-			{
-				OutData.Status = ETaskStatus::Failed;
-			}
-			else
-			{
-				UE_LOG(LogTemp, Warning, TEXT("Invalid status string"));
-				return false;
-			}
-		}
-		const TArray<TSharedPtr<FJsonValue>>* HeatmapArray = nullptr;
-		if (JsonObject->TryGetArrayField(TEXT("result"), HeatmapArray))
-		{
-			if (FHeatmapData::ParseArrayFromJson(HeatmapArray, OutData.HeatMapDataArray))
-			{
-				UE_LOG(LogTemp, Log, TEXT("Parsed HeatmapDataArray: size=%d"), OutData.HeatMapDataArray.Num());
-			} else
-			{
-				UE_LOG(LogTemp, Warning, TEXT("Failed to parse HeatmapDataArray"));
-				return false;
-			}
-		} else
-		{
-			OutData.HeatMapDataArray = TArray<FHeatmapData>();
-		}
-		JsonObject->TryGetStringField(TEXT("createdAt"), OutData.CreateAt);
-		JsonObject->TryGetStringField(TEXT("updatedAt"), OutData.UpdateAt);
-		return true;
+		Task.Status = ParseFromStatusEnum(Dto.Status);
+		Task.CreateAt = Dto.CreatedAt;
+		Task.UpdateAt = Dto.UpdatedAt;
+		return Task;
 	}
+
+
 
 	void Log()
 	{
@@ -144,8 +74,24 @@ struct FHeatMapTask
 		UE_LOG(LogTemp, Log, TEXT("ZVisible: %s"), ZVisible ? TEXT("true") : TEXT("false"));
 		UE_LOG(LogTemp, Log, TEXT("Status: %s"), Status == ETaskStatus::Pending ? TEXT("Pending") : Status == ETaskStatus::Processing ? TEXT("Processing") : Status == ETaskStatus::Completed ? TEXT("Completed") : TEXT("Failed"));
 		UE_LOG(LogTemp, Log, TEXT("HeatMapData: size=%d"), HeatMapDataArray.Num());
-		UE_LOG(LogTemp, Log, TEXT("CreateAt: %s"), *CreateAt);
-		UE_LOG(LogTemp, Log, TEXT("UpdateAt: %s"), *UpdateAt);
+		UE_LOG(LogTemp, Log, TEXT("CreateAt: %s"), *CreateAt.ToString());
+		UE_LOG(LogTemp, Log, TEXT("UpdateAt: %s"), *UpdateAt.ToString());
 	}
-
+private:
+	static ETaskStatus ParseFromStatusEnum(const OpenAPIHeatmapTaskDto::StatusEnum& Status)
+	{
+		if (Status == OpenAPIHeatmapTaskDto::StatusEnum::Pending)
+		{
+			return Pending;
+		}
+		if (Status == OpenAPIHeatmapTaskDto::StatusEnum::Processing)
+		{
+			return Processing;
+		}
+		if (Status == OpenAPIHeatmapTaskDto::StatusEnum::Completed)
+		{
+			return Completed;
+		}
+		return Failed;
+	}
 };
