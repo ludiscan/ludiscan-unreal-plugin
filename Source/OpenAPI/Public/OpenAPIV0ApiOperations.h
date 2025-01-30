@@ -44,7 +44,7 @@ public:
 	void SetupHttpRequest(const FHttpRequestRef& HttpRequest) const final;
 	FString ComputePath() const final;
 
-	FString ProjectId;
+	int32 ProjectId = 0;
 	OpenAPICreateHeatmapDto OpenAPICreateHeatmapDto;
 };
 
@@ -68,8 +68,8 @@ public:
 	void SetupHttpRequest(const FHttpRequestRef& HttpRequest) const final;
 	FString ComputePath() const final;
 
-	FString ProjectId;
-	FString SessionId;
+	int32 ProjectId = 0;
+	int32 SessionId = 0;
 	OpenAPICreateHeatmapDto OpenAPICreateHeatmapDto;
 };
 
@@ -93,7 +93,7 @@ public:
 	void SetupHttpRequest(const FHttpRequestRef& HttpRequest) const final;
 	FString ComputePath() const final;
 
-	FString TaskId;
+	int32 TaskId = 0;
 };
 
 class OPENAPI_API OpenAPIV0Api::HeatmapControllerGetTaskResponse : public Response
@@ -116,7 +116,7 @@ public:
 	void SetupHttpRequest(const FHttpRequestRef& HttpRequest) const final;
 	FString ComputePath() const final;
 
-	FString ProjectId;
+	int32 ProjectId = 0;
 	OpenAPICalcFieldRequestDto OpenAPICalcFieldRequestDto;
 };
 
@@ -140,7 +140,7 @@ public:
 	void SetupHttpRequest(const FHttpRequestRef& HttpRequest) const final;
 	FString ComputePath() const final;
 
-	FString ProjectId;
+	int32 ProjectId = 0;
 	OpenAPICreatePlaySessionDto OpenAPICreatePlaySessionDto;
 };
 
@@ -164,8 +164,8 @@ public:
 	void SetupHttpRequest(const FHttpRequestRef& HttpRequest) const final;
 	FString ComputePath() const final;
 
-	FString ProjectId;
-	FString SessionId;
+	int32 ProjectId = 0;
+	int32 SessionId = 0;
 };
 
 class OPENAPI_API OpenAPIV0Api::PlaySessionControllerDeleteResponse : public Response
@@ -188,7 +188,7 @@ public:
 	void SetupHttpRequest(const FHttpRequestRef& HttpRequest) const final;
 	FString ComputePath() const final;
 
-	FString ProjectId;
+	int32 ProjectId = 0;
 };
 
 class OPENAPI_API OpenAPIV0Api::PlaySessionControllerDeleteAllResponse : public Response
@@ -211,9 +211,9 @@ public:
 	void SetupHttpRequest(const FHttpRequestRef& HttpRequest) const final;
 	FString ComputePath() const final;
 
-	FString ProjectId;
-	TOptional<FString> Limit;
-	TOptional<FString> Offset;
+	int32 ProjectId = 0;
+	TOptional<int32> Limit;
+	TOptional<int32> Offset;
 	TOptional<bool> IsFinished;
 };
 
@@ -237,8 +237,8 @@ public:
 	void SetupHttpRequest(const FHttpRequestRef& HttpRequest) const final;
 	FString ComputePath() const final;
 
-	FString ProjectId;
-	FString SessionId;
+	int32 ProjectId = 0;
+	int32 SessionId = 0;
 };
 
 class OPENAPI_API OpenAPIV0Api::PlaySessionControllerFindOneResponse : public Response
@@ -261,8 +261,8 @@ public:
 	void SetupHttpRequest(const FHttpRequestRef& HttpRequest) const final;
 	FString ComputePath() const final;
 
-	FString ProjectId;
-	FString SessionId;
+	int32 ProjectId = 0;
+	int32 SessionId = 0;
 };
 
 class OPENAPI_API OpenAPIV0Api::PlaySessionControllerFinishResponse : public Response
@@ -285,8 +285,8 @@ public:
 	void SetupHttpRequest(const FHttpRequestRef& HttpRequest) const final;
 	FString ComputePath() const final;
 
-	FString ProjectId;
-	FString SessionId;
+	int32 ProjectId = 0;
+	int32 SessionId = 0;
 	OpenAPIUpdatePlaySessionDto OpenAPIUpdatePlaySessionDto;
 };
 
@@ -310,8 +310,8 @@ public:
 	void SetupHttpRequest(const FHttpRequestRef& HttpRequest) const final;
 	FString ComputePath() const final;
 
-	FString ProjectId;
-	FString SessionId;
+	int32 ProjectId = 0;
+	int32 SessionId = 0;
 };
 
 class OPENAPI_API OpenAPIV0Api::PlayerPositionLogControllerGetResponse : public Response
@@ -334,8 +334,8 @@ public:
 	void SetupHttpRequest(const FHttpRequestRef& HttpRequest) const final;
 	FString ComputePath() const final;
 
-	FString ProjectId;
-	FString SessionId;
+	int32 ProjectId = 0;
+	int32 SessionId = 0;
 	TOptional<HttpFileInput> File;
 };
 
@@ -382,7 +382,7 @@ public:
 	void SetupHttpRequest(const FHttpRequestRef& HttpRequest) const final;
 	FString ComputePath() const final;
 
-	FString Id;
+	int32 Id = 0;
 };
 
 class OPENAPI_API OpenAPIV0Api::ProjectsControllerDeleteResponse : public Response
@@ -405,6 +405,8 @@ public:
 	void SetupHttpRequest(const FHttpRequestRef& HttpRequest) const final;
 	FString ComputePath() const final;
 
+	TOptional<int32> Limit;
+	TOptional<int32> Offset;
 };
 
 class OPENAPI_API OpenAPIV0Api::ProjectsControllerFindAllResponse : public Response
@@ -427,7 +429,7 @@ public:
 	void SetupHttpRequest(const FHttpRequestRef& HttpRequest) const final;
 	FString ComputePath() const final;
 
-	FString Id;
+	int32 Id = 0;
 };
 
 class OPENAPI_API OpenAPIV0Api::ProjectsControllerGetMetaDataKeysResponse : public Response
@@ -495,7 +497,7 @@ public:
 	void SetupHttpRequest(const FHttpRequestRef& HttpRequest) const final;
 	FString ComputePath() const final;
 
-	FString Id;
+	int32 Id = 0;
 };
 
 class OPENAPI_API OpenAPIV0Api::UsersControllerFindOneResponse : public Response

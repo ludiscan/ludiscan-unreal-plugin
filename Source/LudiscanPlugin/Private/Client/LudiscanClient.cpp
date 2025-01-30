@@ -227,8 +227,8 @@ namespace LudiscanAPI
 	{
 		OpenAPIV0Api::PlaySessionControllerFinishRequest Req = OpenAPIV0Api::PlaySessionControllerFinishRequest();
 		OpenAPIV0Api::FPlaySessionControllerFinishDelegate Delegate = OpenAPIV0Api::FPlaySessionControllerFinishDelegate();
-		Req.ProjectId = FString::FromInt(projectId);
-		Req.SessionId = FString::FromInt(sessionId);
+		Req.ProjectId = projectId;
+		Req.SessionId = sessionId;
 
 		Delegate.BindLambda([this, OnSuccess, OnFailure](const OpenAPIV0Api::PlaySessionControllerFinishResponse& Res)
 		{
@@ -260,8 +260,8 @@ namespace LudiscanAPI
 		CreateHeatmapDto.StepSize = StepSize;
 		CreateHeatmapDto.ZVisible = ZVisualize;
 
-		Req.ProjectId = FString::FromInt(ProjectId);
-		Req.SessionId = FString::FromInt(SessionId);
+		Req.ProjectId = ProjectId;
+		Req.SessionId = SessionId;
 		Req.OpenAPICreateHeatmapDto = CreateHeatmapDto;
 
 		Delegate.BindLambda([this, OnSuccess, OnFailure](const OpenAPIV0Api::HeatmapControllerCreateSessionTaskResponse& Res)
@@ -295,7 +295,7 @@ namespace LudiscanAPI
 		CreateHeatmapDto.StepSize = StepSize;
 		CreateHeatmapDto.ZVisible = ZVisualize;
 
-		Req.ProjectId = FString::FromInt(ProjectId);
+		Req.ProjectId = ProjectId;
 		Req.OpenAPICreateHeatmapDto = CreateHeatmapDto;
 
 		OpenAPIV0Api::FHeatmapControllerCreateProjectTaskDelegate Delegate = OpenAPIV0Api::FHeatmapControllerCreateProjectTaskDelegate();
@@ -321,7 +321,7 @@ namespace LudiscanAPI
 	{
 		OpenAPIV0Api::HeatmapControllerGetTaskRequest Req = OpenAPIV0Api::HeatmapControllerGetTaskRequest();
 		OpenAPIV0Api::FHeatmapControllerGetTaskDelegate Delegate = OpenAPIV0Api::FHeatmapControllerGetTaskDelegate();
-		Req.TaskId = FString::FromInt(Task.TaskId);
+		Req.TaskId = Task.TaskId;
 		Delegate.BindLambda([this, OnSuccess, OnFailure](const OpenAPIV0Api::HeatmapControllerGetTaskResponse& Res)
 		{
 			if (Res.Content.TaskId != 0)
@@ -366,7 +366,7 @@ namespace LudiscanAPI
 
 
 
-		Req.ProjectId = FString::FromInt(projectId);
+		Req.ProjectId = projectId;
 		Req.OpenAPICreatePlaySessionDto = CreatePlaySessionDto;
 
 
@@ -415,9 +415,9 @@ namespace LudiscanAPI
 		int Offset) const
 	{
 		OpenAPIV0Api::PlaySessionControllerFindAllRequest Req = OpenAPIV0Api::PlaySessionControllerFindAllRequest();
-		Req.ProjectId = FString::FromInt(projectId);
-		Req.Limit = FString::FromInt(Limit);
-		Req.Offset = FString::FromInt(Offset);
+		Req.ProjectId = projectId;
+		Req.Limit = Limit;
+		Req.Offset = Offset;
 		Req.IsFinished = true;
 		OpenAPIV0Api::FPlaySessionControllerFindAllDelegate Delegate = OpenAPIV0Api::FPlaySessionControllerFindAllDelegate();
 		Delegate.BindLambda([this, OnFailure, OnSuccess](const OpenAPIV0Api::PlaySessionControllerFindAllResponse& Res)
@@ -501,8 +501,8 @@ namespace LudiscanAPI
 		}
 		RequestDto.MetaData = MetaData;
 
-		Req.ProjectId = FString::FromInt(ProjectId);
-		Req.SessionId = FString::FromInt(SessionId);
+		Req.ProjectId = ProjectId;
+		Req.SessionId = SessionId;
 		Req.OpenAPIUpdatePlaySessionDto = RequestDto;
 
 		OpenAPIV0Api::FPlaySessionControllerUpdateDelegate Delegate = OpenAPIV0Api::FPlaySessionControllerUpdateDelegate();

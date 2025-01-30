@@ -814,6 +814,18 @@ bool OpenAPIV0Api::ProjectsControllerDeleteResponse::FromJson(const TSharedPtr<F
 FString OpenAPIV0Api::ProjectsControllerFindAllRequest::ComputePath() const
 {
 	FString Path(TEXT("/api/v0/projects"));
+	TArray<FString> QueryParams;
+	if(Limit.IsSet())
+	{
+		QueryParams.Add(FString(TEXT("limit=")) + ToUrlString(Limit.GetValue()));
+	}
+	if(Offset.IsSet())
+	{
+		QueryParams.Add(FString(TEXT("offset=")) + ToUrlString(Offset.GetValue()));
+	}
+	Path += TCHAR('?');
+	Path += FString::Join(QueryParams, TEXT("&"));
+
 	return Path;
 }
 
