@@ -10,7 +10,7 @@ using namespace OpenAPI;
 namespace LudiscanAPI
 {
 	
-	const FString LudiscanClient::SaveApiHostNameKey = TEXT("LudiscanApiHostName");
+	const FString LudiscanClient::SaveApiHostNameKey = TEXT("LudiscanApiHostName2025.2.1");
 	const FString LudiscanClient::SaveHeatmapColorScaleFilterKey = TEXT("LudiscanHeatmapColorScaleFiler");
 	const FString LudiscanClient::SaveHeatmapDrawZAxisKey = TEXT("LudiscanHeatmapDrawZAxis");
 	const FString LudiscanClient::SaveProjectIdKey = TEXT("LudiscanProjectId");
@@ -125,7 +125,7 @@ namespace LudiscanAPI
 
 	LudiscanClient::LudiscanClient()
 	{
-		Api.SetURL(GetSaveApiHostName("https://yuhi.tokyo"));
+		Api.SetURL(GetSaveApiHostName("https://matuyuhi.com"));
 		bIsDebug = true;
 	}
 
@@ -207,7 +207,7 @@ namespace LudiscanAPI
 		Req.BinaryData = ConstructBinaryData(players, stampCount, allPositions);
 
 		OpenAPIV0ApiFeature ApiFeature = OpenAPIV0ApiFeature();
-		FString Url = GetSaveApiHostName("https://yuhi.tokyo");
+		FString Url = GetSaveApiHostName("https://matuyuhi.com");
 		Delegate.BindLambda([this, OnSuccess](const OpenAPIV0Api::PlayerPositionLogControllerPostResponse& Res)
 		{
 			if (Res.Content.Success)

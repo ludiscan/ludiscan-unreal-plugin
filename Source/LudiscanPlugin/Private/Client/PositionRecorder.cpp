@@ -9,7 +9,7 @@ using namespace LudiscanAPI;
 
 UPositionRecorder::UPositionRecorder(): StartTime(0), WorldContext(nullptr)
 {
-	FString HostName = LudiscanClient::GetSaveApiHostName("https://yuhi.tokyo");
+	FString HostName = LudiscanClient::GetSaveApiHostName("https://matuyuhi.com");
 	Client.SetConfig(HostName);
 	IsInSession = false;
 }

@@ -43,7 +43,7 @@ FText SLudiscanMainWidget::GetHostName() const
 {
 	if (Hostname.IsEmpty())
 	{
-		const FString TempName = LudiscanAPI::LudiscanClient::GetSaveApiHostName("https://yuhi.tokyo");
+		const FString TempName = LudiscanAPI::LudiscanClient::GetSaveApiHostName("https://matuyuhi.com");
 		if (TempName.IsEmpty())
 		{
 			return FText::FromString(Hostname); // デフォルト値を使用

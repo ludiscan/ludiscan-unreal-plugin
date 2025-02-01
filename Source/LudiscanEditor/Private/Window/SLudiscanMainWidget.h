@@ -65,7 +65,7 @@ public:
 				CreateRequestEditor()
 			]
 		];
-		Hostname = LudiscanAPI::LudiscanClient::GetSaveApiHostName("https://yuhi.tokyo");
+		Hostname = LudiscanAPI::LudiscanClient::GetSaveApiHostName("https://matuyuhi.com");
 	}
 
 	virtual ~SLudiscanMainWidget() override
